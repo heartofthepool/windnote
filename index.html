@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nốt nhạc Saxophone</title>
+<style>
+  :root{
+    --bg:#f6f3ee; --card:#ffffff; --ink:#1d1f24; --muted:#6b6f78; --line:#e3ded5;
+    --brass:#b9822a; --brass-soft:#f5e7cc; --concert:#2b7bb9;
+    --pressed:#1d1f24; --open:#ffffff;
+    --gap:clamp(6px,1vmin,14px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:clamp(11px,1.15vmin + .3vw,15px)}
+  /* ===== Bố cục 1 trang ===== */
+  .app{height:100vh;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) clamp(130px,25vh,280px);
+    gap:var(--gap);padding:var(--gap)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  h1{font-size:1.5em;margin:0} h1 span{color:var(--brass)}
+  .middle{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:var(--gap);min-height:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:var(--gap);min-height:0;min-width:0}
+  h2{font-size:.82em;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 .5em}
+  .hint{color:var(--muted);font-size:.82em;margin:.4em 0 0}
+
+  .seg{display:inline-flex;background:#e9e4da;border-radius:12px;padding:4px;gap:4px}
+  .seg button{border:0;background:transparent;padding:.6em 1.2em;border-radius:9px;font-size:1em;font-weight:600;color:var(--muted);cursor:pointer}
+  .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .seg.small button{padding:.35em .8em;font-size:.85em}
+  header h1{white-space:nowrap}
+  /* ===== Thanh chọn nhạc cụ ===== */
+  .instbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  #instSeg button,.fam>button{padding:.35em .8em;line-height:1.15;white-space:nowrap}
+  #instSeg button b,.fam>button b{display:block;font-size:.92em}
+  #instSeg button small,.fam>button small{display:block;font-size:.7em;font-weight:500;opacity:.8;max-width:11em;overflow:hidden;text-overflow:ellipsis}
+  .fam{position:relative}
+  .fam>button{border:1px solid var(--line);background:#fbfaf7;border-radius:12px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;text-align:left}
+  .fam>button:hover{background:#f1ece2}
+  .fam>button.on{background:var(--card);color:var(--ink);border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset}
+  .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.14);padding:6px;min-width:15em;max-height:70vh;overflow:auto;display:none}
+  .fam.open .menu{display:block}
+  .menu button{display:flex;justify-content:space-between;gap:1em;width:100%;border:0;background:transparent;font:inherit;text-align:left;
+    padding:.45em .7em;border-radius:8px;cursor:pointer;color:var(--ink)}
+  .menu button:hover{background:#f3efe6}
+  .menu button.on{background:var(--brass);color:#fff}
+  .menu button small{color:var(--muted);white-space:nowrap} .menu button.on small{color:#f5e7cc}
+
+  /* ===== Trái: thế bấm ===== */
+  .left{display:flex;flex-direction:column}
+  .fings{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+  .fing{min-width:0;min-height:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;
+    padding:.5em;background:#fdfcfa}
+  .fing h4{margin:0 .2em;font-size:1em;height:1.45em;line-height:1.45em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fing.empty{background:transparent;border-style:dashed;opacity:.5}
+  .fing .tag{display:inline-block;font-size:.72em;background:var(--brass-soft);color:#7a5414;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+  .fing p{margin:.2em .2em .3em;font-size:.8em;color:var(--muted);line-height:1.3;height:3.9em;overflow:hidden;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+  .fing .svgbox{flex:1;min-height:0;position:relative}
+  .fing svg{position:absolute;inset:0;width:100%;height:100%}
+  .fing .keys{font-size:.78em;margin:.3em .2em 0;height:1.3em;line-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  svg .k{stroke:#3a3d44;stroke-width:1.6;fill:var(--open)}
+  svg .k.p{fill:var(--pressed)}
+  svg .t{font-size:9px;text-anchor:middle;dominant-baseline:central;fill:#3a3d44;pointer-events:none;font-weight:600}
+  svg .t.p{fill:#fff}
+  svg .cap{font-size:10px;fill:var(--muted);text-anchor:middle}
+  svg .k.back{stroke-dasharray:3 2}
+  svg .big-t{font-size:15px;font-weight:700;fill:#1d1f24;text-anchor:middle}
+  svg .mid-t{font-size:11px;fill:#3a3d44;text-anchor:middle}
+
+  /* ===== Phải: thông số ===== */
+  .right{display:flex;flex-direction:column;gap:var(--gap);overflow:auto}
+  .sel{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.6em 1.6em}
+  .big{font-size:clamp(22px,3.2vmin + 1vw,46px);font-weight:700;line-height:1}
+  .lbl{font-size:.72em;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3em}
+  .written .big{color:var(--brass)} .concert .big{color:var(--concert)}
+  .sub{font-size:.85em;color:var(--muted);margin-top:.25em}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .btn{border:1px solid var(--line);background:#fbfaf7;border-radius:10px;padding:.5em .9em;font-size:.95em;font-weight:600;cursor:pointer}
+  .btn:hover{background:#f1ece2}
+  .group{margin-bottom:.3em}
+  .group h3{font-size:.74em;margin:0 0 .2em;color:var(--muted);font-weight:600}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(3.3em,1fr));gap:3px}
+  .chip{border:1px solid var(--line);background:#fbfaf7;border-radius:7px;padding:.18em .1em;cursor:pointer;text-align:center;line-height:1.15;font:inherit}
+  .chip b{display:block;font-size:.9em}
+  .chip small{font-size:.7em;color:var(--concert)}
+  .chip.r1{background:#fbfaf7} .chip.r2{background:#f3efe6} .chip.r3{background:#ebe4d4}
+  .reg{display:flex;gap:1em;font-size:.72em;color:var(--muted);margin-bottom:.3em}
+  .reg i{display:inline-block;width:.9em;height:.9em;border:1px solid var(--line);border-radius:3px;margin-right:.3em;vertical-align:-1px}
+  .chip.on{background:var(--brass);border-color:var(--brass);color:#fff}
+  .chip.on small{color:#fff}
+  .legend{display:flex;flex-wrap:wrap;gap:.4em 1em;align-items:center;font-size:.85em}
+  .dot{display:inline-block;width:.9em;height:.9em;border-radius:3px;margin-right:.4em;vertical-align:-1px}
+
+  /* ===== Tuner ===== */
+  .tuner{flex:1 1 0;min-height:9.5em;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;padding:.6em;background:#fdfcfa}
+  .tun-head{display:flex;flex-wrap:wrap;align-items:center;gap:.3em .8em}
+  .tun-head .btn{padding:.35em .8em}
+  .tun-opts{display:flex;flex-wrap:wrap;gap:.2em .9em;margin-left:auto}
+  .tun-opt{font-size:.82em;color:var(--muted);display:inline-flex;align-items:center;gap:.3em}
+  .tun-opt input[type=number]{width:4.4em;font:inherit;padding:.15em .3em;border:1px solid var(--line);border-radius:6px}
+  .tun-body{flex:1;min-height:0;display:flex;align-items:center;gap:1em;margin-top:.3em}
+  .gauge{flex:0 1 auto;height:100%;min-height:0;max-width:52%;aspect-ratio:220/128}
+  .gauge text{font-size:9px;fill:var(--muted);text-anchor:middle}
+  #needle{transition:transform .12s linear;transform-origin:110px 112px}
+  .tun-read{flex:1 1 45%;min-width:0}
+  .tun-note{font-size:clamp(26px,4vmin + .8vw,56px);font-weight:700;line-height:1.05}
+  /* Giữ chỗ cố định cho dòng phụ và ô nhắc nhở để chữ nốt không bị nhảy */
+  .tun-read .sub{min-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tun-status{margin-top:.4em;font-weight:600;font-size:.95em;line-height:1.3;padding:.35em .6em;border-radius:8px;
+    display:block;box-sizing:border-box;height:calc(2.6em + .7em);overflow:hidden;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;transition:background .2s,color .2s}
+  .tun-status:empty{background:transparent}
+  .st-ok{background:#dff3e3;color:#1f6b33} .st-near{background:#fbf0d6;color:#7a5414}
+  .st-off{background:#fbe1dd;color:#9b2c1f} .st-other{background:#e7eef6;color:#24557f}
+  .wk.live,.bk.live{box-shadow:inset 0 0 0 3px #2fa04a}
+  #micBtn.on{background:#1d1f24;color:#fff;border-color:#1d1f24}
+
+  /* ===== Dưới: piano tự co giãn ===== */
+  .bottom{display:flex;flex-direction:column}
+  .piano{position:relative;flex:1;min-height:0;margin-top:1.5em}
+  .wk,.bk{position:absolute;top:0;border-radius:0 0 5px 5px;cursor:pointer;display:flex;align-items:flex-end;justify-content:center}
+  .wk{background:#fff;border:1px solid #b9b4aa;height:100%}
+  .wk span{font-size:clamp(7px,.75vw + .3vh,12px);color:#555;margin-bottom:.4em;font-weight:600}
+  .wk.c span{color:#111}
+  .bk{background:#22252b;height:62%;z-index:2}
+  .bk span{font-size:clamp(5px,.5vw + .2vh,9px);color:#cfd2d8;margin-bottom:.3em}
+  .wk.w,.bk.w{background:var(--brass)} .wk.cc,.bk.cc{background:var(--concert)}
+  .wk.w span,.bk.w span,.wk.cc span,.bk.cc span{color:#fff}
+  .badge{position:absolute;bottom:100%;margin-bottom:3px;left:50%;transform:translateX(-50%);font-size:clamp(9px,.8vw,12px);font-weight:700;color:#fff;
+    border-radius:5px;padding:1px 5px;white-space:nowrap;z-index:3}
+  .badge.w{background:var(--brass)} .badge.cc{background:var(--concert)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1d1f24;color:#fff;padding:10px 16px;
+    border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+  .toast.show{opacity:1}
+
+  /* Màn hình hẹp (điện thoại dọc): xếp chồng, cho phép cuộn */
+  @media (max-width:760px), (max-height:420px){
+    body{overflow:auto}
+    .app{height:auto;grid-template-rows:auto auto auto}
+    .middle{grid-template-columns:1fr}
+    .fings{height:62vh}
+    .bottom{height:200px}
+    .right{overflow:visible}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Nốt nhạc <span>Saxophone</span></h1>
+    <div class="instbar">
+      <div class="seg" id="instSeg"></div>
+      <div id="fams" class="instbar"></div>
+    </div>
+  </header>
+
+  <div class="middle">
+    <section class="card left">
+      <h2 id="fingTitle">Cách bấm</h2>
+      <div class="fings" id="fings"></div>
+      <p class="hint" id="fingHint"></p>
+    </section>
+
+    <section class="card right">
+      <div class="sel">
+        <div class="written"><div class="lbl"><span class="wWord">Nốt kèn</span> · thế bấm</div><div class="big" id="wName"></div><div class="sub" id="wSol"></div></div>
+        <div class="concert"><div class="lbl">Âm thanh thật</div><div class="big" id="cName"></div><div class="sub" id="cSol"></div></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="playBtn">▶ Nghe</button>
+        <button class="btn" id="prevBtn" title="Nốt trước (←)">◀ Nốt trước</button>
+        <button class="btn" id="nextBtn" title="Nốt sau (→)">Nốt sau ▶</button>
+      </div>
+      <div>
+        <h2>Chọn nốt (<span class="wWordL">nốt kèn</span>)</h2>
+        <div id="groups"></div>
+      </div>
+
+      <div class="tuner" id="tuner">
+        <div class="tun-head">
+          <h2 style="margin:0">Tuner (micro)</h2>
+          <button class="btn" id="micBtn">🎤 Bật tuner</button>
+          <span class="tun-opts">
+            <label class="tun-opt"><input type="checkbox" id="followChk"> Tự chọn nốt theo tiếng thổi</label>
+            <label class="tun-opt">A4 = <input type="number" id="a4Input" min="430" max="450" step="1" value="440"> Hz</label>
+          </span>
+        </div>
+        <div class="tun-body">
+          <svg class="gauge" viewBox="0 0 220 128" id="gauge">
+            <path id="gArc" fill="none" stroke="#ece7dd" stroke-width="14" stroke-linecap="round"/>
+            <path id="gOk" fill="none" stroke="#bfe3c6" stroke-width="14"/>
+            <g id="gTicks"></g>
+            <line id="needle" x1="110" y1="112" x2="110" y2="30" stroke="#1d1f24" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="110" cy="112" r="6" fill="#1d1f24"/>
+          </svg>
+          <div class="tun-read">
+            <div class="lbl">Đang thổi (<span class="wWordL">nốt kèn</span>)</div>
+            <div class="tun-note" id="tNote">–</div>
+            <div class="sub" id="tSub">Bấm “Bật tuner” và cho phép dùng micro</div>
+            <div class="tun-status" id="tStatus"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card bottom">
+    <div class="legend">
+      <span><i class="dot" style="background:var(--brass)"></i><span class="wWord">Nốt kèn</span></span>
+      <span><i class="dot" style="background:var(--concert)"></i>Âm thanh thật</span>
+      <span><i class="dot" style="background:#fff;box-shadow:inset 0 0 0 2px #2fa04a"></i>Tuner đang nghe</span>
+      <span class="hint" id="instHint" style="margin:0"></span>
+      <span style="margin-left:auto">Bấm piano chọn theo:
+        <span class="seg small" id="modeSeg"><button data-mode="written" class="wWord">Nốt kèn</button><button data-mode="concert">Nốt thật</button></span>
+      </span>
+    </div>
+    <div class="piano" id="piano"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   NỐT NHẠC SAXOPHONE — dữ liệu thế bấm & giao diện (chạy offline)
+   Quy ước: số MIDI, C4 = 60 (Đô giữa). "Nốt kèn/sáo" = nốt viết theo thế bấm.
+   shift = số nửa cung từ nốt viết đến âm thanh thật.
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+
+/* ---------- Tên nốt ---------- */
+const SHARP = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const FLAT  = {1:'D♭',3:'E♭',6:'G♭',8:'A♭',10:'B♭'};
+const SOL   = ['Đô','Đô♯','Rê','Mi♭','Mi','Fa','Fa♯','Sol','Sol♯','La','Si♭','Si'];
+const octv = m => Math.floor(m / 12) - 1;
+const pc = m => ((m % 12) + 12) % 12;
+const primary = m => ([3,10].includes(pc(m)) ? FLAT[pc(m)] : SHARP[pc(m)]) + octv(m);
+const fullName = m => FLAT[pc(m)] ? SHARP[pc(m)] + octv(m) + ' / ' + FLAT[pc(m)] + octv(m) : SHARP[pc(m)] + octv(m);
+const f = (name, keys, note='') => ({ name, keys, note });
+
+/* ---------- Vẽ sơ đồ phím chung ---------- */
+const HALF_DEFS = [25,50,75].map(p =>
+  `<linearGradient id="hf${p}" x1="0" x2="1" y1="0" y2="0"><stop offset="${p/100}" stop-color="#1d1f24"/><stop offset="${p/100}" stop-color="#fff"/></linearGradient>`).join('');
+const parseTok = t => { const [id, fr] = t.split(':'); return [id, fr === undefined ? 1 : +fr]; };
+const FR_TXT = { .25:'¼', .5:'½', .75:'¾' };
+function keysSVG(geo, toks, bg = '', fg = '', vb = '18 20 210 480'){
+  const st = new Map(toks.map(parseTok));
+  let s = `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid meet" role="img"><defs>${HALF_DEFS}</defs>${bg}`;
+  for (const [id,k] of Object.entries(geo)){
+    if (k.show && !k.show()) continue;
+    const fr = st.get(id) || 0;
+    const p = fr >= 1 ? ' p' : '';
+    const half = fr > 0 && fr < 1 ? ` style="fill:url(#hf${Math.round(fr*100)})"` : '';
+    const cls = `k${p}${k.back ? ' back' : ''}`;
+    const shape = k.r ? `<circle class="${cls}" cx="${k.x}" cy="${k.y}" r="${k.r}"${half}/>`
+                      : `<ellipse class="${cls}" cx="${k.x}" cy="${k.y}" rx="${k.rx}" ry="${k.ry}"${half}/>`;
+    const fs = k.fs ? ` style="font-size:${k.fs}px"` : (k.r && k.r >= 14 ? ' style="font-size:12px"' : '');
+    const tx = (k.t !== undefined && !half) ? `<text class="t${p}" x="${k.x}" y="${k.y}"${fs}>${k.t}</text>` : '';
+    s += `<g><title>${k.d}</title>${shape}${tx}</g>`;
+  }
+  return s + fg + '</svg>';
+}
+function keysSummary(geo, toks){
+  if (!toks.length) return 'Không bấm phím nào (mở hết)';
+  return toks.map(t => { const [id,fr] = parseTok(t); return (geo[id] ? geo[id].d : id) + (fr < 1 ? ' ' + FR_TXT[fr] : ''); }).join(' · ');
+}
+const cap = (x, y, t) => `<text class="cap" x="${x}" y="${y}">${t}</text>`;
+const body = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${w/2}" fill="#f1ede5"/>`;
+
+/* =====================================================================
+   1) SAXOPHONE (và Roland Aerophone / Yamaha YDS dùng thế bấm sax)
+   ===================================================================== */
+const L = ['L1','L2','L3'], R = ['R1','R2','R3'];
+const SAX_GEO = {
+  oct:{x:36,y:150,rx:14,ry:9,t:'8va',d:'Octave'},
+  lowA:{x:36,y:176,rx:11,ry:7,t:'A',d:'A trầm', show:()=>INST.lowA},
+  pD:{x:80,y:64,rx:9,ry:15,t:'D',d:'Palm D', show:()=>!INST.ewi},
+  pEb:{x:62,y:96,rx:9,ry:15,t:'E♭',d:'Palm E♭', show:()=>!INST.ewi},
+  pF:{x:80,y:128,rx:9,ry:15,t:'F',d:'Palm F', show:()=>!INST.ewi},
+  fF:{x:130,y:72,rx:13,ry:7,t:'Ff',d:'Front F', show:()=>!INST.ewi},
+  L1:{x:130,y:108,r:19,t:'1',d:'T1'},
+  bis:{x:130,y:141,r:7,t:'bis',d:'Bis',fs:6.5},
+  L2:{x:130,y:174,r:19,t:'2',d:'T2'},
+  L3:{x:130,y:226,r:19,t:'3',d:'T3'},
+  gs:{x:192,y:222,rx:17,ry:8,t:'G♯',d:'G♯'},
+  lcs:{x:178,y:248,rx:13,ry:8,t:'C♯',d:'C♯ trầm'},
+  lb:{x:208,y:248,rx:13,ry:8,t:'B',d:'B trầm'},
+  lbb:{x:193,y:272,rx:13,ry:8,t:'B♭',d:'B♭ trầm'},
+  R1:{x:130,y:312,r:19,t:'1',d:'P1'},
+  R2:{x:130,y:366,r:19,t:'2',d:'P2'},
+  R3:{x:130,y:420,r:19,t:'3',d:'P3'},
+  sE:{x:198,y:310,rx:7,ry:14,t:'E',d:'Side E', show:()=>!INST.ewi},
+  sC:{x:198,y:342,rx:7,ry:14,t:'C',d:'Side C'},
+  sBb:{x:198,y:374,rx:7,ry:14,t:'B♭',d:'Side B♭'},
+  tFs:{x:176,y:398,rx:7,ry:11,t:'F♯',d:'F♯ phụ', show:()=>!INST.ewi},
+  hFs:{x:84,y:392,rx:7,ry:11,t:'F♯',d:'F♯ cao', show:()=>!INST.ewi},
+  ebk:{x:166,y:462,rx:15,ry:8,t:'E♭',d:'E♭ trầm'},
+  lc:{x:136,y:486,rx:17,ry:8,t:'C',d:'C trầm'}
+};
+const SAX_F = {
+  57:[f('Chuẩn',[...L,...R,'lbb','lowA'],'Út trái bấm B♭ trầm + ngón cái trái bấm phím A trầm (chỉ có trên baritone).')],
+  58:[f('Chuẩn',[...L,...R,'lbb'],'Ngón út trái bấm phím B♭ trầm.')],
+  59:[f('Chuẩn',[...L,...R,'lb'],'Ngón út trái bấm phím B trầm.')],
+  60:[f('Chuẩn',[...L,...R,'lc'],'Ngón út phải bấm phím C trầm.')],
+  61:[f('Chuẩn',[...L,...R,'lcs'],'Ngón út trái bấm phím C♯ trầm.')],
+  62:[f('Chuẩn',[...L,...R])],
+  63:[f('Chuẩn',[...L,...R,'ebk'],'Ngón út phải bấm phím E♭.')],
+  64:[f('Chuẩn',[...L,'R1','R2'])],
+  65:[f('Chuẩn',[...L,'R1'])],
+  66:[f('Chuẩn',[...L,'R2'],'Dùng ngón giữa tay phải.'),
+      f('Phím F♯ phụ',[...L,'R1','R2','tFs'],'Dùng khi láy (trill) E–F♯.')],
+  67:[f('Chuẩn',[...L])],
+  68:[f('Chuẩn',[...L,'gs'],'Ngón út trái bấm phím G♯.')],
+  69:[f('Chuẩn',['L1','L2'])],
+  70:[f('Bis B♭',['L1','bis'],'Ngón trỏ trái đè cả phím B và phím bis. Tiện cho giọng có nhiều B♭.'),
+      f('1 + 1',['L1','R1'],'Ngón trỏ trái + ngón trỏ phải. Dùng khi nốt kế bên cần B tự nhiên.'),
+      f('Side B♭',['L1','sBb'],'Ngón trỏ trái + side key B♭. Hay dùng khi đi chromatic.')],
+  71:[f('Chuẩn',['L1'])],
+  72:[f('Chuẩn',['L2'],'Chỉ ngón giữa tay trái.'),
+      f('Side C',['L1','sC'],'Ngón trỏ trái + side key C. Dùng khi láy B–C hoặc chromatic.')],
+  73:[f('Chuẩn',[],'Không bấm phím nào (mở hết).')],
+  86:[f('Chuẩn',['oct','pD'],'Palm key D (lòng bàn tay trái).')],
+  87:[f('Chuẩn',['oct','pD','pEb'])],
+  88:[f('Chuẩn',['oct','pD','pEb','sE'],'Thêm side key E (tay phải).')],
+  89:[f('Chuẩn',['oct','pD','pEb','pF','sE']),
+      f('Front F',['oct','fF','L1'],'Ngón trỏ trái đè front F + phím B. Có thể thêm ngón 3 tay trái để chỉnh cao độ.')],
+  90:[f('Chuẩn',['oct','pD','pEb','pF','sE','hFs'],'Ngón áp út tay phải bấm phím F♯ cao.'),
+      f('Không có phím F♯ cao',['oct','pD','pEb','pF','sE','R2'],'Thế F cao + ngón giữa tay phải. Cao độ tùy kèn.')]
+};
+for (let m = 62; m <= 73; m++)
+  SAX_F[m + 12] = SAX_F[m].map(x => f(x.name, ['oct', ...x.keys], m === 73 ? 'Chỉ bấm phím octave.' : x.note));
+const SAX_BG = body(111,88,38,352) + cap(130,34,'TAY TRÁI') + '<line x1="40" y1="272" x2="160" y2="272" stroke="#e3ded5" stroke-dasharray="4 4"/>' + cap(60,286,'TAY PHẢI');
+
+const SYS_SAX = {
+  hint:'Phím tô đen = bấm. Tay trái ở trên, tay phải ở dưới. Ngón 1 = trỏ, 2 = giữa, 3 = áp út.',
+  fing: m => SAX_F[m] || [],
+  svg: x => keysSVG(SAX_GEO, x.keys, SAX_BG),
+  sum: x => keysSummary(SAX_GEO, x.keys),
+  groups: i => [
+    { title:`Thấp ${primary(i.low)}–C♯5`, from:i.low, to:73 },
+    { title:'Giữa D5–C♯6 (octave)', from:74, to:85 },
+    { title:'Cao D6–F♯6 (palm keys)', from:86, to:i.high }
+  ]
+};
+
+/* ---------- Akai EWI: thế bấm kiểu sax + con lăn quãng tám ---------- */
+const EWI_GEO = Object.assign({}, SAX_GEO, {
+  ro1:{x:40,y:300,rx:16,ry:7,t:'1',d:'Con lăn 1'},
+  ro2:{x:40,y:322,rx:16,ry:7,t:'2',d:'Con lăn 2'},
+  ro3:{x:40,y:344,rx:16,ry:7,t:'3',d:'Con lăn 3'},
+  ro4:{x:40,y:366,rx:16,ry:7,t:'4',d:'Con lăn 4'}
+});
+delete EWI_GEO.oct; delete EWI_GEO.lowA;
+const SYS_EWI = {
+  hint:'Phím tô đen = chạm. Ngón cái trái đặt lên con lăn (1 = thấp nhất) để chọn quãng tám. Phím cảm ứng, chỉ cần chạm.',
+  fing: m => {
+    const b = ((m - 62) % 12 + 12) % 12 + 62;           // nốt gốc D4–C♯5
+    const roll = (m - b) / 12 + 3;                        // con lăn 1–4
+    return (SAX_F[b] || []).map(x => f(x.name, [...x.keys, 'ro' + roll],
+      `Con lăn số ${roll}. ` + (x.note || '')));
+  },
+  svg: x => keysSVG(EWI_GEO, x.keys, SAX_BG + cap(40,390,'CON LĂN')),
+  sum: x => keysSummary(EWI_GEO, x.keys)
+};
+
+/* =====================================================================
+   2) FLUTE HỆ BOEHM (Concert flute, Piccolo, Alto flute, Bass flute)
+   Nguồn: Woodwind Fingering Guide (wfg.woodwind.org)
+   ===================================================================== */
+const FL_GEO = {
+  Th:{x:62,y:118,rx:10,ry:15,t:'B',d:'Ngón cái (B)'},
+  ThBb:{x:62,y:152,rx:8,ry:11,t:'B♭',d:'Ngón cái B♭'},
+  L1:{x:130,y:104,r:17,t:'1',d:'T1'},
+  L2:{x:130,y:156,r:17,t:'2',d:'T2'},
+  L3:{x:130,y:208,r:17,t:'3',d:'T3'},
+  Gs:{x:184,y:226,rx:15,ry:8,t:'G♯',d:'G♯ (út trái)'},
+  Bbl:{x:90,y:288,rx:7,ry:12,t:'B♭',d:'Cần B♭'},
+  R1:{x:130,y:296,r:17,t:'1',d:'P1'},
+  T1:{x:178,y:322,rx:8,ry:11,t:'t1',d:'Trill 1'},
+  R2:{x:130,y:348,r:17,t:'2',d:'P2'},
+  T2:{x:178,y:374,rx:8,ry:11,t:'t2',d:'Trill 2'},
+  R3:{x:130,y:400,r:17,t:'3',d:'P3'},
+  Ds:{x:184,y:432,rx:15,ry:8,t:'E♭',d:'E♭ (út phải)'},
+  Cs:{x:164,y:470,rx:13,ry:8,t:'C♯',d:'C♯ chân'},
+  C:{x:124,y:470,rx:15,ry:8,t:'C',d:'C chân'}
+};
+const FL_BG = body(114,82,32,340) + cap(130,40,'TAY TRÁI') + cap(130,58,'(lỗ thổi ở trên)') + cap(64,260,'TAY PHẢI') + cap(64,474,'CHÂN SÁO');
+const TL = ['Th','L1','L2','L3'];
+const FL_F = {
+  60:[f('Chuẩn',[...TL,...R,'C'],'Út phải bấm phím C ở chân sáo.')],
+  61:[f('Chuẩn',[...TL,...R,'Cs'])],
+  62:[f('Chuẩn',[...TL,...R])],
+  63:[f('Chuẩn',[...TL,...R,'Ds'])],
+  64:[f('Chuẩn',[...TL,'R1','R2','Ds'])],
+  65:[f('Chuẩn',[...TL,'R1','Ds'])],
+  66:[f('Chuẩn',[...TL,'R3','Ds'],'Dùng ngón áp út phải.'), f('Ngón giữa',[...TL,'R2','Ds'],'Dùng khi láy (trill) với E.')],
+  67:[f('Chuẩn',[...TL,'Ds'])],
+  68:[f('Chuẩn',[...TL,'Gs','Ds'])],
+  69:[f('Chuẩn',['Th','L1','L2','Ds'])],
+  70:[f('1 + 1',['Th','L1','R1','Ds'],'Thế B♭ cơ bản.'),
+      f('Ngón cái B♭',['ThBb','L1','Ds'],'Ngón cái đặt lên phím B♭ — dùng khi đoạn nhạc không có B.'),
+      f('Cần B♭',['Th','L1','Bbl','Ds'],'Dùng khi láy B♭–B.')],
+  71:[f('Chuẩn',['Th','L1','Ds'])],
+  72:[f('Chuẩn',['L1','Ds'],'Nhấc ngón cái.')],
+  73:[f('Chuẩn',['Ds'],'Chỉ giữ phím E♭ ở ngón út phải.')],
+  74:[f('Chuẩn',['Th','L2','L3',...R],'Nhấc ngón trỏ trái, út phải không bấm.')],
+  75:[f('Chuẩn',['Th','L2','L3',...R,'Ds'])],
+  86:[f('Chuẩn',['Th','L2','L3','Ds'])],
+  87:[f('Chuẩn',[...TL,'Gs',...R,'Ds'])],
+  88:[f('Chuẩn',['Th','L1','L2','R1','R2','Ds'])],
+  89:[f('Chuẩn',['Th','L1','L3','R1','Ds'])],
+  90:[f('Chuẩn',['Th','L1','L3','R3','Ds'])],
+  91:[f('Chuẩn',['L1','L2','L3','Ds'],'Không ngón cái.')],
+  92:[f('Chuẩn',['L2','L3','Gs','Ds'])],
+  93:[f('Chuẩn',['Th','L2','R1','Ds'])],
+  94:[f('Chuẩn',['Th','R1','T1'],'Dùng phím trill 1.')],
+  95:[f('Chuẩn',['Th','L1','L3','T2'],'Dùng phím trill 2.')],
+  96:[f('Chuẩn (chân C)',['L1','L2','L3','Gs','R1'])]
+};
+for (let m = 64; m <= 73; m++) FL_F[m + 12] = FL_F[m].map(x => f(x.name, x.keys, (x.note ? x.note + ' ' : '') + 'Thổi mạnh hơn lên quãng 2.'));
+const SYS_FLUTE = {
+  hint:'Phím tô đen = bấm. Sáo cầm ngang sang phải; sơ đồ dựng đứng: tay trái gần lỗ thổi. Ngón 1 = trỏ, 2 = giữa, 3 = áp út.',
+  fing: m => FL_F[m] || [],
+  svg: x => keysSVG(FL_GEO, x.keys, FL_BG),
+  sum: x => keysSummary(FL_GEO, x.keys)
+};
+
+/* =====================================================================
+   3) CLARINET HỆ BOEHM (B♭, A, E♭, Bass) — nguồn: wfg.woodwind.org
+   ===================================================================== */
+const CL_GEO = {
+  Rk:{x:40,y:128,rx:13,ry:8,t:'R',d:'Phím register'},
+  T:{x:52,y:160,r:11,t:'T',d:'Lỗ ngón cái'},
+  A:{x:130,y:58,rx:13,ry:7,t:'A',d:'Phím A'},
+  Gs:{x:170,y:76,rx:10,ry:7,t:'G♯',d:'Phím G♯ cạnh'},
+  L1:{x:130,y:104,r:17,t:'1',d:'T1'},
+  Ebs:{x:94,y:182,rx:6,ry:12,t:'E♭',d:'Sliver E♭',fs:7},
+  L2:{x:130,y:156,r:17,t:'2',d:'T2'},
+  L3:{x:130,y:208,r:17,t:'3',d:'T3'},
+  lE:{x:178,y:236,rx:12,ry:8,t:'E',d:'E (út trái)'},
+  lF:{x:206,y:236,rx:12,ry:8,t:'F',d:'F (út trái)'},
+  lFs:{x:178,y:258,rx:12,ry:8,t:'F♯',d:'F♯ (út trái)'},
+  lCs:{x:206,y:258,rx:12,ry:8,t:'C♯',d:'C♯ (út trái)'},
+  lGs:{x:192,y:280,rx:12,ry:7,t:'G♯',d:'G♯ (út trái)'},
+  s1:{x:206,y:306,rx:6,ry:10,t:'1',d:'Side 1'},
+  s2:{x:206,y:330,rx:6,ry:10,t:'2',d:'Side 2'},
+  s3:{x:206,y:354,rx:6,ry:10,t:'3',d:'Side 3'},
+  s4:{x:206,y:378,rx:6,ry:10,t:'4',d:'Side 4 (E♭)'},
+  R1:{x:130,y:300,r:17,t:'1',d:'P1'},
+  R2:{x:130,y:352,r:17,t:'2',d:'P2'},
+  R3:{x:130,y:404,r:17,t:'3',d:'P3'},
+  Bsl:{x:94,y:378,rx:6,ry:12,t:'B',d:'Sliver B'},
+  rE:{x:110,y:446,rx:13,ry:8,t:'E',d:'E (út phải)'},
+  rF:{x:152,y:446,rx:13,ry:8,t:'F',d:'F (út phải)'},
+  rFs:{x:110,y:470,rx:13,ry:8,t:'F♯',d:'F♯ (út phải)'},
+  rGs:{x:152,y:470,rx:13,ry:8,t:'G♯',d:'G♯ (út phải)'},
+  lowEb:{x:48,y:420,rx:12,ry:8,t:'E♭',d:'E♭ trầm', show:()=>INST.lowKeys},
+  lowD:{x:48,y:444,rx:12,ry:8,t:'D',d:'D trầm', show:()=>INST.lowKeys},
+  lowCs:{x:48,y:468,rx:12,ry:8,t:'C♯',d:'C♯ trầm', show:()=>INST.lowKeys},
+  lowC:{x:48,y:492,rx:12,ry:8,t:'C',d:'C trầm', show:()=>INST.lowKeys}
+};
+const CL_BG = body(114,82,32,340) + cap(130,34,'TAY TRÁI') + cap(64,272,'TAY PHẢI');
+const TL3 = ['T','L1','L2','L3'];
+const CL_F = {
+  52:[f('Út trái',[...TL3,'lE',...R]), f('Út phải',[...TL3,...R,'rE']), f('Kết hợp F',[...TL3,'lE',...R,'rF'],'Dùng khi nối với F3 hoặc C5.')],
+  53:[f('Út phải',[...TL3,...R,'rF']), f('Út trái',[...TL3,'lF',...R])],
+  54:[f('Út trái',[...TL3,'lFs',...R]), f('Út phải',[...TL3,...R,'rFs']), f('Kết hợp F',[...TL3,'lFs',...R,'rF'])],
+  55:[f('Chuẩn',[...TL3,...R])],
+  56:[f('Chuẩn',[...TL3,...R,'rGs']), f('G♯ trái',[...TL3,'lGs',...R],'Cho kèn có phím G♯ ở út trái.')],
+  57:[f('Chuẩn',[...TL3,'R1','R2'])],
+  58:[f('Chuẩn',[...TL3,'R1'])],
+  59:[f('Chuẩn',[...TL3,'R2'])],
+  60:[f('Chuẩn',[...TL3])],
+  61:[f('Chuẩn',[...TL3,'lCs'])],
+  62:[f('Chuẩn',['T','L1','L2'])],
+  63:[f('Chuẩn',['T','L1','L2','s4'],'Bấm side key 4 bằng tay phải.'), f('Sliver E♭',['T','L1','L2','Ebs'],'Dùng khi đi chromatic, láy.'), f('1 + 1',['T','L1','R1'],'Hơi cao — dùng khi đang bấm ngón trỏ phải.')],
+  64:[f('Chuẩn',['T','L1'])],
+  65:[f('Chuẩn',['T'],'Chỉ bịt lỗ ngón cái.')],
+  66:[f('Chuẩn',['L1'],'Nhấc ngón cái.'), f('Chromatic',['T','s3','s4'],'Dùng khi nối với F4.')],
+  67:[f('Chuẩn',[],'Mở hết (G cổ họng).')],
+  68:[f('Chuẩn',['Gs'],'Phím G♯ cạnh bên.')],
+  69:[f('Chuẩn',['A'],'Phím A.')],
+  70:[f('Chuẩn',['Rk','A'],'Register + phím A.'), f('Side 2',['A','s2'],'Dùng khi láy A–B♭.')]
+};
+for (let m = 52; m <= 65; m++)       // quãng clarion B4–C6 = chalumeau + phím register (cao hơn quãng 12)
+  CL_F[m + 19] = CL_F[m].map(x => f(x.name, ['Rk', ...x.keys], x.note));
+CL_F[78].push(f('Chromatic',['Rk','T','L1','L2','L3','R1','Bsl'],'Dùng khi nối với B♭4 hoặc F5.'));
+CL_F[80].push(f('Ngón phải',['Rk','T','L1','L2','R1','R2'],'Dùng khi tay phải đang bấm.'));
+Object.assign(CL_F, {
+  85:[f('Chuẩn',['Rk','T','L2','L3','R1','R2'])],
+  86:[f('Chuẩn',['Rk','T','L2','L3','R1','rGs']), f('Láy',['Rk','T','Gs','s4'],'Ít non hơn, dùng láy với C5.')],
+  87:[f('Chuẩn',['Rk','T','L2','L3','R1','Bsl','rGs']), f('Nối quãng dưới',['Rk','T','L2','L3','R3','rGs'])],
+  88:[f('Chuẩn',['Rk','T','L2','L3','rGs'])],
+  89:[f('Chuẩn',['Rk','T','L2','L3','lCs','rGs']), f('Nối / pp',['Rk',...TL3,'lCs',...R],'Dùng khi nối từ quãng dưới và chơi nhỏ.')],
+  90:[f('Chuẩn',['Rk','T','L2','rGs']), f('Chuẩn cao độ',['Rk','T','L1','L2','s4','rGs'],'Dễ phát âm, tốt cho bước nhảy xa.'), f('Ổn định',['Rk','T','L1','L2',...R,'rGs'],'Tốt cho pp và ff.')],
+  91:[f('Chuẩn',['Rk','T','L2','R1','R2','rGs']), f('Nối từ clarion',['Rk','T','L1','R1','R2','rGs'])],
+  48:[f('Chuẩn (bass)',[...TL3,'lE',...R,'lowC'],'Chỉ có trên bass clarinet xuống C trầm.')],
+  49:[f('Chuẩn (bass)',[...TL3,'lE',...R,'lowCs'])],
+  50:[f('Chuẩn (bass)',[...TL3,'lE',...R,'lowD'])],
+  51:[f('Chuẩn (bass)',[...TL3,'lE',...R,'lowEb'])]
+});
+const SYS_CLAR = {
+  hint:'Phím/lỗ tô đen = bấm. R = phím register (ngón cái trái). Sliver = phím mảnh nằm cạnh lỗ.',
+  fing: m => CL_F[m] || [],
+  svg: x => keysSVG(CL_GEO, x.keys, CL_BG),
+  sum: x => keysSummary(CL_GEO, x.keys)
+};
+
+/* =====================================================================
+   4) OBOE & ENGLISH HORN (cùng thế bấm) — nguồn: wfg.woodwind.org
+   ===================================================================== */
+const OB_GEO = {
+  O1:{x:40,y:150,rx:13,ry:8,t:'8va',d:'Octave (ngón cái)'},
+  O2:{x:172,y:84,rx:12,ry:7,t:'8²',d:'Octave cạnh'},
+  L1:{x:130,y:104,r:17,t:'1',d:'T1'},
+  Btr:{x:168,y:130,rx:7,ry:9,t:'tr',d:'Trill B',fs:7},
+  L2:{x:130,y:156,r:17,t:'2',d:'T2'},
+  L3:{x:130,y:208,r:17,t:'3',d:'T3'},
+  lGs:{x:176,y:232,rx:12,ry:7,t:'G♯',d:'G♯ (út trái)'},
+  lB:{x:204,y:232,rx:12,ry:7,t:'B',d:'B (út trái)'},
+  lEb:{x:176,y:254,rx:12,ry:7,t:'E♭',d:'E♭ (út trái)'},
+  lBb:{x:204,y:254,rx:12,ry:7,t:'B♭',d:'B♭ (út trái)'},
+  lF:{x:190,y:276,rx:12,ry:7,t:'F',d:'F (út trái)'},
+  sGs:{x:92,y:300,rx:6,ry:11,t:'G♯',d:'G♯ cạnh',fs:7},
+  sA:{x:92,y:326,rx:6,ry:11,t:'A',d:'A cạnh',fs:7},
+  R1:{x:130,y:300,r:17,t:'1',d:'P1'},
+  R2:{x:130,y:352,r:17,t:'2',d:'P2'},
+  R3:{x:130,y:404,r:17,t:'3',d:'P3'},
+  rF:{x:172,y:420,rx:8,ry:10,t:'F',d:'Phím F phải'},
+  rC:{x:104,y:462,rx:13,ry:8,t:'C',d:'C (út phải)'},
+  rCs:{x:144,y:462,rx:13,ry:8,t:'C♯',d:'C♯ (út phải)'},
+  rEb:{x:184,y:462,rx:13,ry:8,t:'E♭',d:'E♭ (út phải)'}
+};
+const OB_BG = body(114,82,32,340) + cap(130,34,'TAY TRÁI') + cap(64,272,'TAY PHẢI');
+const H = 'L1:0.5';   // nửa lỗ (half-hole) ngón trỏ trái
+const OB_F = {
+  58:[f('Chuẩn',[...L,'lBb',...R,'rC'])],
+  59:[f('Chuẩn',[...L,'lB',...R,'rC'])],
+  60:[f('Chuẩn',[...L,...R,'rC'])],
+  61:[f('Chuẩn',[...L,...R,'rCs'])],
+  62:[f('Chuẩn',[...L,...R])],
+  63:[f('Chuẩn',[...L,...R,'rEb']), f('E♭ trái',[...L,'lEb',...R],'Dùng khi nối với C4, C♯4.')],
+  64:[f('Chuẩn',[...L,'R1','R2'])],
+  65:[f('Chuẩn',[...L,'R1','R2','rF']), f('F trái',[...L,'lF','R1','R2'],'Dùng khi nối với ngón 3 phải.'), f('F chéo',[...L,'R1','R3'],'Thế bấm chéo (forked F).')],
+  66:[f('Chuẩn',[...L,'R1'])],
+  67:[f('Chuẩn',[...L])],
+  68:[f('Chuẩn',[...L,'lGs']), f('G♯ cạnh',[...L,'sGs'],'Dùng để láy.')],
+  69:[f('Chuẩn',['L1','L2'])],
+  70:[f('Chuẩn',['L1','L2','R1']), f('Trill B',['L1','Btr','L2','R1'],'Láy với B4.')],
+  71:[f('Chuẩn',['L1'])],
+  72:[f('Chuẩn',['L1','R1'])],
+  73:[f('Chuẩn',[H,'L2','L3',...R,'rCs'],'Ngón trỏ trái mở nửa lỗ (half-hole).')],
+  74:[f('Chuẩn',[H,'L2','L3',...R],'Half-hole.')],
+  75:[f('Chuẩn',[H,'L2','L3',...R,'rEb'],'Half-hole.')],
+  76:[f('Chuẩn',['O1',...L,'R1','R2'])],
+  77:[f('Chuẩn',['O1',...L,'R1','R2','rF']), f('F trái',['O1',...L,'lF','R1','R2']), f('F chéo',['O1',...L,'R1','R3'])],
+  78:[f('Chuẩn',['O1',...L,'R1'])],
+  79:[f('Chuẩn',['O1',...L])],
+  80:[f('Chuẩn',['O1',...L,'lGs']), f('G♯ cạnh',['O1',...L,'sGs'])],
+  81:[f('Chuẩn',['O2','L1','L2'],'Phím octave thứ 2 (cạnh).')],
+  82:[f('Chuẩn',['O2','L1','L2','R1'])],
+  83:[f('Chuẩn',['O2','L1']), f('Trill B',['O2','L1','Btr','R1'],'Láy với B♭5.')],
+  84:[f('Chuẩn',['O2','L1','R1'])],
+  85:[f('Chuẩn',['L2','L3','R1','rC'])],
+  86:[f('Chuẩn',[H,'L2','L3','rC']), f('Chuẩn cao độ',[H,'L2','L3','R2','rC'])],
+  87:[f('Chuẩn',[H,'L2','L3','lB','R2','R3']), f('E♭ phải',[H,'L2','L3','R2','R3','rEb'],'Dùng khi nối với E♭5 hoặc D6.')],
+  88:[f('Chuẩn',['O1',H,'L2','L3','lGs','lEb','R2','R3']), f('E♭ phải',['O1',H,'L2','L3','lGs','R2','R3','rEb'])],
+  89:[f('Chuẩn',['O1',H,'L2','lGs','lEb','R2','R3']), f('E♭ phải',['O1',H,'L2','lGs','R2','R3','rEb'])]
+};
+const SYS_OBOE = {
+  hint:'Phím tô đen = bấm; nửa đen = mở nửa lỗ (half-hole). 8va = phím octave ngón cái, 8² = phím octave cạnh.',
+  fing: m => OB_F[m] || [],
+  svg: x => keysSVG(OB_GEO, x.keys, OB_BG),
+  sum: x => keysSummary(OB_GEO, x.keys)
+};
+
+/* =====================================================================
+   5) BASSOON (hệ Heckel) — nguồn: wfg.woodwind.org
+   ===================================================================== */
+const BN_GEO = {
+  fA:{x:82,y:58,rx:10,ry:7,t:'a',d:'Flick A'},
+  fC:{x:82,y:78,rx:10,ry:7,t:'c',d:'Flick C'},
+  fD:{x:82,y:98,rx:10,ry:7,t:'d',d:'Flick D'},
+  W:{x:44,y:96,rx:12,ry:9,t:'W',d:'Whisper'},
+  lCs:{x:44,y:124,rx:12,ry:8,t:'C♯',d:'C♯ (cái trái)'},
+  lD:{x:44,y:150,rx:12,ry:8,t:'D',d:'D (cái trái)'},
+  lC:{x:44,y:176,rx:12,ry:8,t:'C',d:'C (cái trái)'},
+  lB:{x:44,y:202,rx:12,ry:8,t:'B',d:'B (cái trái)'},
+  lBb:{x:44,y:228,rx:12,ry:8,t:'B♭',d:'B♭ (cái trái)'},
+  L1:{x:130,y:120,r:17,t:'1',d:'T1'},
+  L2:{x:130,y:170,r:17,t:'2',d:'T2'},
+  L3:{x:130,y:220,r:17,t:'3',d:'T3'},
+  lpCs:{x:184,y:236,rx:13,ry:8,t:'C♯',d:'C♯ (út trái)'},
+  lpEb:{x:184,y:260,rx:13,ry:8,t:'E♭',d:'E♭ (út trái)'},
+  rE:{x:84,y:300,rx:12,ry:8,t:'E',d:'E (cái phải)'},
+  rFs:{x:84,y:324,rx:12,ry:8,t:'F♯',d:'F♯ (cái phải)'},
+  rGs:{x:84,y:348,rx:12,ry:8,t:'G♯',d:'G♯ (cái phải)'},
+  rBb:{x:84,y:372,rx:12,ry:8,t:'B♭',d:'B♭ (cái phải)'},
+  R1:{x:130,y:304,r:17,t:'1',d:'P1'},
+  R2:{x:130,y:354,r:17,t:'2',d:'P2'},
+  R3:{x:130,y:404,r:17,t:'3',d:'P3'},
+  rBbs:{x:166,y:404,rx:5,ry:11,t:'',d:'Vòng B♭'},
+  rF:{x:150,y:448,rx:13,ry:8,t:'F',d:'F (út phải)'},
+  rpFs:{x:112,y:470,rx:13,ry:8,t:'F♯',d:'F♯ (út phải)'},
+  rpGs:{x:188,y:470,rx:13,ry:8,t:'G♯',d:'G♯ (út phải)'}
+};
+const BN_BG = body(114,98,32,330) + cap(130,40,'TAY TRÁI') + cap(44,74,'CÁI TRÁI') + cap(84,280,'CÁI PHẢI') + cap(196,290,'TAY PHẢI');
+const BL = ['L1','L2','L3'];
+const BN_F = {
+  34:[f('Chuẩn',['lBb','lC','lD',...BL,'rE',...R,'rF'])],
+  35:[f('Chuẩn',['lB','lC','lD',...BL,'rE',...R,'rF'])],
+  36:[f('Chuẩn',['lC','lD',...BL,'rE',...R,'rF'])],
+  37:[f('Chuẩn',['lC','lD',...BL,'lpCs','rE',...R,'rF'])],
+  38:[f('Chuẩn',['lD',...BL,'rE',...R,'rF'])],
+  39:[f('Chuẩn',['lD',...BL,'lpEb','rE',...R,'rF'])],
+  40:[f('Chuẩn',['W',...BL,'rE',...R,'rF'])],
+  41:[f('Chuẩn',['W',...BL,...R,'rF'])],
+  42:[f('Chuẩn',['W',...BL,'rFs',...R,'rF']), f('F♯ út phải',['W',...BL,...R,'rF','rpFs'],'Dùng khi ngón cái phải đang bận.')],
+  43:[f('Chuẩn',['W',...BL,...R])],
+  44:[f('Chuẩn',['W',...BL,...R,'rpGs']), f('G♯ ngón cái',['W',...BL,'rGs',...R],'Dùng khi út phải đang bận.')],
+  45:[f('Chuẩn',['W',...BL,'R1','R2'])],
+  46:[f('Chuẩn',['W',...BL,'rBb','R1','R2']), f('Vòng B♭',['W',...BL,'R1','R2','rBbs'])],
+  47:[f('Chuẩn',['W',...BL,'R1'])],
+  48:[f('Chuẩn',['W',...BL])],
+  49:[f('Chuẩn',['lD','lCs','W',...BL])],
+  50:[f('Chuẩn',['W','L1','L2'])],
+  51:[f('Chuẩn',['W','L1','L3']), f('pp',['W','L1','L3','rBb','R2'],'Rất tốt khi chơi nhỏ (pp).'), f('Biến thể',['W','L1','L3','lpEb','rBb','R2'])],
+  52:[f('Chuẩn',['W','L1'])],
+  53:[f('Chuẩn',['W'],'Chỉ giữ phím whisper.')],
+  54:[f('Chuẩn',['W','L1:0.25','L2','L3','rFs',...R,'rF'],'Mở hơn nửa lỗ ngón 1 trái.'), f('F♯ út phải',['W','L1:0.25','L2','L3',...R,'rF','rpFs'])],
+  55:[f('Chuẩn',['W','L1:0.5','L2','L3','lpEb',...R],'Bịt khoảng nửa lỗ ngón 1 trái.')],
+  56:[f('Chuẩn',['W','L1:0.75','L2','L3',...R,'rpGs'],'Bịt hơn nửa lỗ ngón 1 trái.'), f('G♯ ngón cái',['W','L1:0.75','L2','L3','rGs',...R])],
+  57:[f('Chuẩn',[...BL,'R1','R2']), f('Flick A',['fA',...BL,'R1','R2'],'Chạm flick A khi luyến lên.')],
+  58:[f('Chuẩn',[...BL,'rBb','R1','R2']), f('Flick A',['fA',...BL,'rBb','R1','R2']), f('Vòng B♭',[...BL,'R1','R2','rBbs'])],
+  59:[f('Chuẩn',[...BL,'R1']), f('Flick C',['fC',...BL,'R1'],'Chạm flick khi luyến.')],
+  60:[f('Chuẩn',[...BL]), f('Flick C',['fC',...BL])],
+  61:[f('Chuẩn',['lD','lCs',...BL]), f('Luyến',['lCs',...BL,'R2','R3','rF'],'Dùng khi luyến.')],
+  62:[f('Chuẩn',['L1','L2']), f('Flick D',['fD','L1','L2'],'Chạm flick D khi luyến.')],
+  63:[f('Chuẩn',['L1','L2',...R])],
+  64:[f('Chuẩn',['L1','L3','lpEb',...R])],
+  65:[f('Chuẩn',['L1','L3','lpEb','R1','R2'])],
+  66:[f('Chuẩn',['L2','L3','lpEb','rBb','R1','R2']), f('F út phải',['L2','L3','lpEb','R1','R2','rF'])],
+  67:[f('Chuẩn',['W','L1:0.5','L2','L3','lpEb','R1','rF'])],
+  68:[f('Chuẩn',['W','L1:0.75','L2','L3','lpEb','R3'])],
+  69:[f('Chuẩn',['fA','lCs',...BL,'lpEb','R3'])],
+  70:[f('Chuẩn',['fA','lCs',...BL,'lpEb','R1','R2','rF'])]
+};
+const SYS_BSN = {
+  hint:'Phím tô đen = bấm; nửa đen = mở một phần lỗ ngón 1. W = phím whisper, a/c/d = phím flick (chạm nhanh khi luyến).',
+  fing: m => BN_F[m] || [],
+  svg: x => keysSVG(BN_GEO, x.keys, BN_BG),
+  sum: x => keysSummary(BN_GEO, x.keys)
+};
+
+/* =====================================================================
+   6) SÁO LỖ ĐƠN GIẢN (sáo trúc, dizi, tiêu, xiao, sáo Mèo, recorder, shakuhachi)
+   x = bịt, o = mở, h = bịt nửa lỗ. Thứ tự lỗ: từ gần lỗ thổi xuống.
+   ===================================================================== */
+function holesGeo(list){
+  const g = {};
+  list.forEach(h => g[h.id] = { x:h.x ?? 130, y:h.y, r:h.r ?? 15, t:h.t ?? '', d:h.d, back:h.back });
+  return g;
+}
+const pat2toks = (ids, pat) => ids.map((id,i) => pat[i] === 'x' ? id : pat[i] === 'h' ? id + ':0.5' : null).filter(Boolean);
+
+/* Mẫu 6 lỗ kiểu sáo trúc / tin whistle: bịt hết = bậc 1 của thang âm trưởng */
+const W6 = {0:['xxxxxx'],1:['xxxxxh'],2:['xxxxxo'],3:['xxxxho'],4:['xxxxoo'],5:['xxxooo'],6:['xxhooo'],
+            7:['xxoooo'],8:['xhoooo'],9:['xooooo'],10:['hooooo','oxxooo'],11:['oooooo']};
+const H6_IDS = ['h1','h2','h3','h4','h5','h6'];
+const H6_GEO = holesGeo([
+  {id:'h1',y:120,t:'1',d:'Lỗ 1'},{id:'h2',y:166,t:'2',d:'Lỗ 2'},{id:'h3',y:212,t:'3',d:'Lỗ 3'},
+  {id:'h4',y:290,t:'4',d:'Lỗ 4'},{id:'h5',y:336,t:'5',d:'Lỗ 5'},{id:'h6',y:382,t:'6',d:'Lỗ 6'}]);
+function sixHole(base, vertical){
+  return {
+    hint:'Lỗ tô đen = bịt, nửa đen = bịt nửa lỗ. Lỗ 1 gần lỗ thổi nhất. Quãng 2 dùng thế bấm giống quãng 1 nhưng thổi mạnh hơn.',
+    fing: m => {
+      const d = m - base, deg = ((d % 12) + 12) % 12, reg = Math.floor(d / 12);
+      if (d < 0) return [];
+      if (reg >= 2) return [f('Thổi rất mạnh', pat2toks(H6_IDS,'xxxxxx'), 'Bịt hết, thổi rất mạnh lên quãng 3 (bồi âm bậc 4).')];
+      const out = W6[deg].map((p,i) => f(i === 0 ? 'Chuẩn' : 'Bấm chéo', pat2toks(H6_IDS, p),
+        (p.includes('h') ? 'Bịt nửa lỗ để ra nốt thăng/giáng. ' : '') + (reg === 1 ? 'Thổi mạnh hơn (quãng 2).' : 'Thổi nhẹ (quãng 1).')));
+      if (reg === 1 && deg === 0) out.push(f('Mở lỗ 1', pat2toks(H6_IDS,'oxxxxx'), 'Hé lỗ 1 giúp nốt quãng 2 dễ phát âm hơn.'));
+      return out;
+    },
+    svg: x => keysSVG(H6_GEO, x.keys, body(115,70,30,350) +
+      (vertical ? cap(130,52,'ĐẦU THỔI') : `<ellipse cx="130" cy="74" rx="9" ry="6" fill="#fff" stroke="#9a958b"/>` + cap(130,52,'LỖ THỔI')) +
+      cap(60,166,'TAY TRÊN') + cap(60,336,'TAY DƯỚI')),
+    sum: x => keysSummary(H6_GEO, x.keys)
+  };
+}
+
+/* Sáo ngang 10 lỗ (mô hình tham khảo: 6 lỗ chính + 4 lỗ bán âm) */
+const H10_IDS = ['h1','h2','h3','s1','h4','h5','h6','s2','s3','s4'];
+const H10_GEO = holesGeo([
+  {id:'h1',y:110,t:'1',d:'Lỗ 1'},{id:'h2',y:154,t:'2',d:'Lỗ 2'},{id:'h3',y:198,t:'3',d:'Lỗ 3'},
+  {id:'s1',y:236,x:162,r:9,t:'a',d:'Lỗ phụ a (Sol♯)'},
+  {id:'h4',y:276,t:'4',d:'Lỗ 4'},{id:'h5',y:320,t:'5',d:'Lỗ 5'},{id:'h6',y:364,t:'6',d:'Lỗ 6'},
+  {id:'s2',y:250,x:98,r:9,t:'b',d:'Lỗ phụ b (Fa♯)'},{id:'s3',y:402,x:162,r:9,t:'c',d:'Lỗ phụ c (Rê♯)'},{id:'s4',y:436,r:9,t:'d',d:'Lỗ phụ d (Đô♯)'}]);
+/* Mỗi mẫu: h1 h2 h3 | a | h4 h5 h6 | b c d — lỗ phụ chỉ mở khi cần nốt bán âm */
+const W10F = {0:'xxx x xxx xxx',1:'xxx x xxx xxo',2:'xxx x xxo xxx',3:'xxx x xxx xox',4:'xxx x xoo xxx',5:'xxx x ooo xxx',
+              6:'xxx x ooo oxx',7:'xxo x ooo xxx',8:'xxo o ooo xxx',9:'xoo x ooo xxx',10:'hoo x ooo xxx',11:'ooo x ooo xxx'};
+const SYS_SAO10 = {
+  hint:'Mô hình tham khảo: 6 lỗ chính (1–6) + 4 lỗ phụ (a–d) cho nốt bán âm. Vị trí lỗ phụ khác nhau tùy người làm sáo — hãy đối chiếu với cây sáo của bạn.',
+  fing: m => {
+    const d = m - 72, deg = ((d % 12) + 12) % 12, reg = Math.floor(d / 12);
+    const p = W10F[deg].replace(/ /g,'');
+    if (reg >= 2) return [f('Thổi rất mạnh', pat2toks(H10_IDS,'xxxxxxxxxx'), 'Bịt hết, thổi rất mạnh lên quãng 3.')];
+    return [f('Chuẩn', pat2toks(H10_IDS, p), (reg === 1 ? 'Thổi mạnh hơn (quãng 2).' : 'Thổi nhẹ (quãng 1).') + (/o/.test(p.slice(7)) || p[3] === 'o' ? ' Mở lỗ phụ cho nốt bán âm.' : ''))];
+  },
+  svg: x => keysSVG(H10_GEO, x.keys, body(115,70,30,380) + `<ellipse cx="130" cy="74" rx="9" ry="6" fill="#fff" stroke="#9a958b"/>` + cap(130,52,'LỖ THỔI')),
+  sum: x => keysSummary(H10_GEO, x.keys)
+};
+
+/* Mẫu 8 lỗ (7 lỗ trước + 1 lỗ sau) — xiao, sáo Mèo kiểu bawu. Thứ tự: f7 (trên) … f1 (dưới), b (sau) */
+const E8_IDS = ['f7','f6','f5','f4','f3','f2','f1','b'];
+const E8_GEO = holesGeo([
+  {id:'b',y:150,x:70,r:12,t:'S',d:'Lỗ sau (ngón cái)',back:true},
+  {id:'f7',y:120,t:'7',d:'Lỗ 7'},{id:'f6',y:160,t:'6',d:'Lỗ 6'},{id:'f5',y:200,t:'5',d:'Lỗ 5'},
+  {id:'f4',y:270,t:'4',d:'Lỗ 4'},{id:'f3',y:310,t:'3',d:'Lỗ 3'},{id:'f2',y:350,t:'2',d:'Lỗ 2'},{id:'f1',y:390,r:12,t:'1',d:'Lỗ 1'}]);
+const E8 = {0:'xxxxxxxx',1:'xxxxxxhx',2:'xxxxxxox',3:'xxxxxhox',4:'xxxxxoox',5:'xxxxooox',6:'xxxhooox',
+            7:'xxxoooox',8:'xxhoooox',9:'xxooooox',10:'xoooooox',11:'ooooooox',12:'oooooooo'};
+function eightHole(base, octaves, freeReed){
+  return {
+    hint:'Lỗ tô đen = bịt, nửa đen = bịt nửa lỗ, viền đứt = lỗ phía sau (ngón cái). Lỗ 1 ở dưới cùng. Thế bấm tham khảo — có thể khác tùy cây.',
+    fing: m => {
+      const d = m - base; if (d < 0) return [];
+      if (freeReed){
+        if (d > 12) return [];
+        return [f('Chuẩn', pat2toks(E8_IDS, E8[d]), 'Sáo lưỡi gà: thổi đều hơi, không thổi vượt quãng như sáo thường.')];
+      }
+      const reg = d >= 12 && d < 24 ? 1 : d >= 24 ? 2 : 0;
+      const deg = d - reg * 12;
+      return [f('Chuẩn', pat2toks(E8_IDS, E8[deg]), reg ? 'Thổi mạnh hơn lên quãng 2.' : 'Thổi nhẹ (quãng 1).')];
+    },
+    svg: x => keysSVG(E8_GEO, x.keys, body(115,70,30,350) + cap(130,52,'ĐẦU THỔI') + cap(66,126,'MẶT SAU')),
+    sum: x => keysSummary(E8_GEO, x.keys)
+  };
+}
+
+/* Recorder (soprano, hệ Baroque/English) — nguồn: wfg.woodwind.org */
+const REC_GEO = holesGeo([
+  {id:'T',y:118,x:70,r:13,t:'0',d:'Lỗ ngón cái (sau)',back:true},
+  {id:'1',y:110,t:'1',d:'Lỗ 1'},{id:'2',y:156,t:'2',d:'Lỗ 2'},{id:'3',y:202,t:'3',d:'Lỗ 3'},
+  {id:'4',y:276,t:'4',d:'Lỗ 4'},{id:'5',y:322,t:'5',d:'Lỗ 5'},
+  {id:'6a',y:368,x:122,r:9,t:'6',d:'Lỗ 6 (lớn)'},{id:'6b',y:370,x:144,r:6,d:'Lỗ 6 (nhỏ)'},
+  {id:'7a',y:414,x:122,r:9,t:'7',d:'Lỗ 7 (lớn)'},{id:'7b',y:416,x:144,r:6,d:'Lỗ 7 (nhỏ)'}]);
+function rec(code){   // 'T123|4567', t = nửa ngón cái, 6½/7½ = chỉ bịt lỗ lớn
+  const out = []; const c = code.replace('|','');
+  for (let i = 0; i < c.length; i++){
+    const ch = c[i], half = c[i+1] === '½';
+    if (ch === 'T') out.push('T'); else if (ch === 't') out.push('T:0.5');
+    else if (ch === '6' || ch === '7'){ out.push(ch + 'a'); if (!half) out.push(ch + 'b'); }
+    else if (/[1-5]/.test(ch)) out.push(ch);
+  }
+  return out;
+}
+const REC_F = {
+  60:[f('Chuẩn',rec('T123|4567'))], 61:[f('Chuẩn',rec('T123|4567½'),'Lỗ 7 chỉ bịt lỗ lớn.')],
+  62:[f('Chuẩn',rec('T123|456'))],  63:[f('Chuẩn',rec('T123|456½'),'Lỗ 6 chỉ bịt lỗ lớn.')],
+  64:[f('Chuẩn',rec('T123|45'))],
+  65:[f('Baroque',rec('T123|467'),'Thế bấm chéo của recorder Baroque.'), f('German',rec('T123|4'),'Cho recorder hệ German.')],
+  66:[f('Baroque',rec('T123|56')), f('German',rec('T123|567'))],
+  67:[f('Chuẩn',rec('T123'))],
+  68:[f('Baroque',rec('T12|456')), f('German',rec('T12|45'))],
+  69:[f('Chuẩn',rec('T12'))],
+  70:[f('Chuẩn',rec('T13|4'))],
+  71:[f('Chuẩn',rec('T1')), f('Nối C',rec('T23'),'Dùng khi nối với C5.')],
+  72:[f('Chuẩn',rec('T2'))],
+  73:[f('Chuẩn',rec('12'),'Mở lỗ ngón cái.'), f('Nối C',rec('T'),'Dùng khi nối với C5.')],
+  74:[f('Chuẩn',rec('2'),'Mở lỗ ngón cái.')],
+  75:[f('Chuẩn',rec('23|456'))],
+  76:[f('Chuẩn',rec('t123|45'),'Hé nửa lỗ ngón cái (pinch).')],
+  77:[f('Baroque',rec('t123|46')), f('German',rec('t123|4'))],
+  78:[f('Baroque',rec('t123|5')), f('German',rec('t123|57'))],
+  79:[f('Chuẩn',rec('t123'))],
+  80:[f('Chuẩn',rec('t12|4'))],
+  81:[f('Chuẩn',rec('t12'))],
+  82:[f('Chuẩn',rec('t12|456'))],
+  83:[f('Chuẩn',rec('t12|45'))],
+  84:[f('Chuẩn',rec('t1|45'))],
+  85:[f('Chuẩn',rec('t13|46'),'Bịt thêm miệng chuông (tì vào đùi).')],
+  86:[f('Chuẩn',rec('t13|46'))]
+};
+const SYS_REC = {
+  hint:'Lỗ tô đen = bịt, nửa đen = hé nửa lỗ ngón cái. Lỗ 0 (viền đứt) ở mặt sau. Lỗ 6, 7 là lỗ đôi.',
+  fing: m => REC_F[m] || [],
+  svg: x => keysSVG(REC_GEO, x.keys, body(115,70,30,370) + cap(130,52,'ĐẦU THỔI') + cap(66,96,'MẶT SAU')),
+  sum: x => keysSummary(REC_GEO, x.keys)
+};
+
+/* Shakuhachi 1.8 (Rê) — 4 lỗ trước + 1 lỗ sau. Meri/kari = cúi/ngẩng cằm để hạ/nâng cao độ */
+const SK_IDS = ['f4','f3','f2','f1','b'];
+const SK_GEO = holesGeo([
+  {id:'b',y:200,x:70,r:13,t:'5',d:'Lỗ sau (ngón cái)',back:true},
+  {id:'f4',y:180,t:'4',d:'Lỗ 4'},{id:'f3',y:240,t:'3',d:'Lỗ 3'},{id:'f2',y:320,t:'2',d:'Lỗ 2'},{id:'f1',y:380,t:'1',d:'Lỗ 1'}]);
+const SK = [ // [tên, mẫu f4 f3 f2 f1 b, kỹ thuật]
+  ['Ro','xxxxx',''],['Tsu dai-meri','xxxox','dai-meri: cúi cằm nhiều (hạ ~1 cung)'],['Tsu meri','xxxox','meri: cúi cằm (hạ ½ cung)'],
+  ['Tsu','xxxox',''],['Re meri','xxoox','meri: cúi cằm'],['Re','xxoox',''],['Chi meri','xooox','meri: cúi cằm'],['Chi','xooox',''],
+  ['Ri dai-meri','oooox','dai-meri: cúi cằm nhiều'],['Ri meri','oooox','meri: cúi cằm'],['Ri','oooox',''],['Ri kari','oooox','kari: ngẩng cằm (nâng ½ cung)']];
+const SYS_SHAKU = {
+  hint:'Lỗ tô đen = bịt; viền đứt = lỗ sau. Shakuhachi đổi bán âm chủ yếu bằng meri (cúi cằm, hạ) và kari (ngẩng cằm, nâng). Thế bấm tham khảo theo phái Kinko.',
+  fing: m => {
+    const d = m - 62; if (d < 0 || d > 24) return [];
+    if (d === 24) return [f('Ro dai-kan', pat2toks(SK_IDS,'xxxxx'), 'Bịt hết, thổi rất mạnh (quãng 3).')];
+    const reg = d >= 12 ? 1 : 0, [nm, p, tech] = SK[d - reg * 12];
+    const out = [f(nm + (reg ? ' (kan)' : ''), pat2toks(SK_IDS, p), (tech ? tech + '. ' : '') + (reg ? 'Thổi mạnh lên quãng 2 (kan).' : 'Quãng 1 (otsu).'))];
+    if (d === 12) out.push(f('Hi', pat2toks(SK_IDS,'ooooo'), 'Mở hết các lỗ — gần đúng Rê quãng 2.'));
+    return out;
+  },
+  svg: x => keysSVG(SK_GEO, x.keys, body(115,70,30,350) + cap(130,52,'UTAGUCHI (đầu thổi)') + cap(66,176,'MẶT SAU')),
+  sum: x => keysSummary(SK_GEO, x.keys)
+};
+
+/* Ocarina 12 lỗ (Alto C, hệ Á) — theo pureocarinas.com */
+const OC_GEO = holesGeo([
+  {id:'L1',x:92,y:130,r:14,t:'1',d:'Trái 1 (trỏ)'},{id:'L2',x:92,y:176,r:14,t:'2',d:'Trái 2 (giữa)'},
+  {id:'L3',x:92,y:222,r:14,t:'3',d:'Trái 3 (áp út)'},{id:'L4',x:92,y:268,r:12,t:'4',d:'Trái 4 (út)'},
+  {id:'R1',x:168,y:130,r:14,t:'1',d:'Phải 1 (trỏ)'},{id:'R2',x:168,y:176,r:14,t:'2',d:'Phải 2 (giữa)'},
+  {id:'R3',x:168,y:222,r:14,t:'3',d:'Phải 3 (áp út)'},{id:'R4a',x:160,y:268,r:8,t:'4',d:'Phải 4a (út)'},{id:'R4b',x:180,y:270,r:6,d:'Phải 4b (út)'},
+  {id:'sL',x:66,y:176,r:6,d:'Lỗ phụ trái'},{id:'sR',x:194,y:176,r:6,d:'Lỗ phụ phải'},
+  {id:'LT',x:92,y:380,r:13,t:'T',d:'Ngón cái trái',back:true},{id:'RT',x:168,y:380,r:13,t:'T',d:'Ngón cái phải',back:true}]);
+const OCALL = ['L1','L2','L3','L4','R1','R2','R3','R4a','R4b','LT','RT'];
+const ocx = (...rm) => OCALL.filter(k => !rm.includes(k));
+const OC_F = {
+  69:[f('Chuẩn',[...OCALL,'sL','sR'],'Bịt hết + cả 2 lỗ phụ (trượt ngón giữa).')],
+  70:[f('Ước lượng',[...OCALL,'sR','sL:0.5'],'Bịt một phần lỗ phụ trái — tùy cây.')],
+  71:[f('Chuẩn',[...OCALL,'sR'],'Bịt hết + lỗ phụ phải.')],
+  72:[f('Chuẩn',[...OCALL],'Bịt hết 10 lỗ chính.')],
+  73:[f('Chuẩn',ocx('R4b'),'Út phải chỉ bịt một phần.')],
+  74:[f('Chuẩn',ocx('R4a','R4b'))],
+  75:[f('Chuẩn',ocx('R3'),'Bấm chéo: mở áp út phải, giữ út phải.')],
+  76:[f('Chuẩn',ocx('R3','R4a','R4b'))],
+  77:[f('Chuẩn',ocx('R2','R3','R4a','R4b'))],
+  78:[f('Chuẩn',['L1','L2','L3','L4','LT','RT','R2','R4a'],'Bấm chéo.')],
+  79:[f('Chuẩn',['L1','L2','L3','L4','LT','RT'])],
+  80:[f('Chuẩn',['LT','L1','L2','L4','RT','R3'],'Bấm chéo.')],
+  81:[f('Chuẩn',['LT','L1','L2','L4','RT'])],
+  82:[f('Chuẩn',['LT','L1','L4','RT','R3'],'Bấm chéo.')],
+  83:[f('Chuẩn',['LT','L1','L4','RT'])],
+  84:[f('Chuẩn',['LT','L4','RT'])],
+  85:[f('Chuẩn',['L4','RT','R3'])],
+  86:[f('Chuẩn',['L4','RT'],'Nhấc ngón cái trái.')],
+  87:[f('Chuẩn',['L2','L4'])],
+  88:[f('Chuẩn',['L4'],'Chỉ giữ út trái.')],
+  89:[f('Chuẩn',[],'Mở hết.')]
+};
+const SYS_OCA = {
+  hint:'Lỗ tô đen = bịt; viền đứt = lỗ ngón cái ở mặt dưới. Lỗ nhỏ cạnh ngón giữa là lỗ phụ cho 2 nốt trầm nhất.',
+  fing: m => OC_F[m] || [],
+  svg: x => keysSVG(OC_GEO, x.keys, `<ellipse cx="130" cy="230" rx="96" ry="190" fill="#f1ede5"/>` + cap(130,70,'ĐẦU THỔI') + cap(92,104,'TAY TRÁI') + cap(168,104,'TAY PHẢI') + cap(130,350,'MẶT DƯỚI')),
+  sum: x => keysSummary(OC_GEO, x.keys)
+};
+
+/* Pan flute (22 ống, Sol trưởng G4–G7) */
+const PAN = []; { let n = 67; const st = [2,2,1,2,2,2,1]; for (let i = 0; i < 22; i++){ PAN.push(n); n += st[i % 7]; } }
+const SYS_PAN = {
+  hint:'Mỗi ống cho một nốt (thang Sol trưởng). Nốt thăng/giáng: thổi ống cao hơn kế bên và nghiêng ống / hạ cằm để hạ nửa cung.',
+  fing: m => {
+    const i = PAN.indexOf(m);
+    if (i >= 0) return [{ name:`Ống ${i+1}`, pipe:i, bend:0, note:'Thổi thẳng vào miệng ống.' }];
+    const j = PAN.indexOf(m + 1);
+    if (j >= 0) return [{ name:`Ống ${j+1} hạ ½ cung`, pipe:j, bend:1, note:'Nghiêng ống ra xa / hạ cằm để hạ nửa cung.' }];
+    return [];
+  },
+  svg: x => {
+    let s = '<svg viewBox="18 20 210 480" preserveAspectRatio="xMidYMid meet" role="img">' + cap(124,40,'ỐNG DÀI (TRẦM) → NGẮN (CAO)');
+    const w = 8.4;
+    PAN.forEach((n,i) => {
+      const h = 400 - i * 14.5, X = 28 + i * w, on = i === x.pipe;
+      s += `<g><title>Ống ${i+1}: ${primary(n)}</title><rect x="${X}" y="60" width="${w-1.6}" height="${h}" rx="3" fill="${on ? (x.bend ? '#c08a1e' : '#1d1f24') : '#fff'}" stroke="#3a3d44" stroke-width="1"/></g>`;
+    });
+    const X = 28 + x.pipe * w + w/2;
+    s += `<text class="big-t" x="${X}" y="${80 + 400 - x.pipe*14.5}">▲</text>`;
+    s += `<text class="mid-t" x="124" y="496">Ống ${x.pipe+1}: ${primary(PAN[x.pipe])}${x.bend ? ' → hạ ½ cung' : ''}</text>`;
+    return s + '</svg>';
+  },
+  sum: x => `Ống số ${x.pipe+1} (${primary(PAN[x.pipe])})${x.bend ? ', nghiêng hạ ½ cung' : ''}`
+};
+
+/* =====================================================================
+   7) KÈN ĐỒNG CÓ VAN — tính theo chuỗi bồi âm (harmonic series)
+   ===================================================================== */
+const HARM = {2:12,3:19,4:24,5:28,6:31,7:34,8:36,9:38,10:40,12:43,15:47,16:48};
+const COMBOS3 = [[[],0],[['2'],1],[['1'],2],[['1','2'],3],[['3'],3],[['2','3'],4],[['1','3'],5],[['1','2','3'],6]];
+const COMBOS4 = [...COMBOS3,[['4'],5],[['2','4'],6],[['1','4'],7],[['1','2','4'],8],[['2','3','4'],9],[['1','3','4'],10],[['1','2','3','4'],11]];
+function brassOptions(i, m){
+  const sides = i.horn ? [['F', i.base], ['B♭', i.base + 5]] : [['', i.base]];
+  const combos = i.valves === 4 ? COMBOS4 : COMBOS3;
+  const opts = [];
+  for (const [side, base] of sides) for (const [p, h] of Object.entries(HARM)){
+    if (+p > i.maxPartial) continue;
+    for (const [v, low] of combos){
+      if (base + h - low !== m) continue;
+      let cost = v.length + (v.length === 1 && v[0] === '3' ? 0.6 : 0) + (+p === 7 ? 50 : 0) + (low >= 5 && i.valves !== 4 ? 0.3 : 0);
+      if (i.horn) cost += ((m < 68) === (side === 'F') ? 0 : 3);
+      opts.push({ side, p:+p, v, low, cost });
+    }
+  }
+  opts.sort((a,b) => a.cost - b.cost || a.p - b.p);
+  return opts.slice(0, 4).map((o,k) => ({
+    name: (k === 0 ? 'Chuẩn' : 'Thay thế') + (o.side ? ` · bên ${o.side}` : ''),
+    valves: o.v, side: o.side, p: o.p,
+    note: `${o.v.length ? 'Van ' + o.v.join('+') : 'Không bấm van'} — bồi âm thứ ${o.p}.` +
+          (o.p === 7 ? ' Bồi âm 7 hơi non (thấp), cần nâng cao độ.' : '') +
+          (o.low >= 5 && i.valves !== 4 ? ' Tổ hợp van này hơi cao, kéo ống chỉnh van 3 hoặc van 1.' : '') +
+          (o.side === 'B♭' ? ' Bấm phím ngón cái (sang bên B♭).' : '')
+  }));
+}
+const SYS_BRASS = {
+  hint:'Van tô đen = bấm. Cùng một thế van, đổi độ căng môi để lên/xuống các bồi âm. Thang bên phải cho biết bồi âm đang dùng.',
+  slots: 4,
+  fing: m => brassOptions(INST, m),
+  svg: x => {
+    const n = INST.valves, xs = n === 4 ? [56,104,152,200] : [74,130,186];
+    let s = '<svg viewBox="18 20 210 480" preserveAspectRatio="xMidYMid meet" role="img">';
+    s += cap(124,44, INST.horn ? 'VAN XOAY + PHÍM NGÓN CÁI' : 'VAN (PISTON)');
+    xs.forEach((X,k) => {
+      const id = String(k+1), on = x.valves.includes(id);
+      s += `<rect x="${X-14}" y="110" width="28" height="120" rx="6" fill="#ece7dd"/>`;
+      s += `<g><title>Van ${id}</title><circle class="k${on?' p':''}" cx="${X}" cy="${on ? 112 : 92}" r="20"/><text class="t${on?' p':''}" x="${X}" y="${on?112:92}" style="font-size:15px">${id}</text></g>`;
+    });
+    if (INST.horn){
+      const on = x.side === 'B♭';
+      s += `<g><title>Phím ngón cái (F ↔ B♭)</title><ellipse class="k${on?' p':''}" cx="52" cy="290" rx="20" ry="12"/><text class="t${on?' p':''}" x="52" y="290">T</text></g>`;
+      s += cap(52,318, on ? 'bên B♭' : 'bên F');
+    }
+    // thang bồi âm
+    const ps = Object.keys(HARM).map(Number).filter(p => p <= INST.maxPartial);
+    const y0 = 470, y1 = 260, top = Math.max(...ps);
+    s += `<line x1="150" y1="${y0}" x2="150" y2="${y1}" stroke="#d8d2c6" stroke-width="2"/>` + cap(184,252,'BỒI ÂM');
+    let lastY = 1e9;
+    ps.forEach(p => {
+      const y = y0 - (HARM[p] - 12) / (HARM[top] - 12 || 1) * (y0 - y1), on = p === x.p;
+      const showLbl = on || lastY - y >= 11; if (showLbl) lastY = y;
+      s += `<line x1="${on?136:142}" y1="${y}" x2="${on?200:158}" y2="${y}" stroke="${on?'#b9822a':'#9a958b'}" stroke-width="${on?4:1.5}"/>`;
+      if (showLbl) s += `<text class="cap" x="${on?212:168}" y="${y+3}" style="${on?'font-weight:700;fill:#1d1f24;font-size:12px':''}">${p}</text>`;
+    });
+    return s + '</svg>';
+  },
+  sum: x => (x.valves.length ? 'Van ' + x.valves.join(' + ') : 'Mở (không van)') + ` · bồi âm ${x.p}` + (x.side ? ` · bên ${x.side}` : '')
+};
+
+/* =====================================================================
+   DANH SÁCH NHẠC CỤ
+   fam: sax | flute | wood | brass | ewi
+   ===================================================================== */
+const ADV = {
+  reed:  ['thả lỏng môi / kéo miệng kèn ra', 'giữ môi chắc hơn / đẩy miệng kèn vào'],
+  flute: ['hướng luồng hơi thấp xuống / thổi nhẹ hơn', 'hướng luồng hơi cao lên / thổi mạnh hơn'],
+  brass: ['thả lỏng môi / kéo ống chỉnh âm ra', 'căng môi hơn / đẩy ống chỉnh âm vào'],
+  ewi:   ['kiểm tra cài đặt Fine Tune / Transpose của máy', 'kiểm tra cài đặt Fine Tune / Transpose của máy']
+};
+const FAMILIES = {
+  sax:   { label:'Saxophone' },
+  flute: { label:'Sáo', word:'sáo' },
+  wood:  { label:'Kèn dăm gỗ' },
+  brass: { label:'Kèn đồng' },
+  ewi:   { label:'Kèn điện tử' }
+};
+const I = (id, fam, name, key, shift, low, high, sys, hint, extra = {}) => ({ id, fam, name, key, shift, low, high, sys, hint, ...extra });
+const INSTRUMENTS = [
+  I('soprano','sax','Soprano','Si♭',-2,58,90,SYS_SAX,'Soprano (Si♭): âm thật thấp hơn nốt kèn một quãng 2 lớn.'),
+  I('alto','sax','Alto','Mi♭',-9,58,90,SYS_SAX,'Alto (Mi♭): âm thật thấp hơn nốt kèn một quãng 6 lớn.'),
+  I('tenor','sax','Tenor','Si♭',-14,58,90,SYS_SAX,'Tenor (Si♭): âm thật thấp hơn nốt kèn 1 quãng 8 + quãng 2 lớn.'),
+  I('baritone','sax','Baritone','Mi♭',-21,57,90,SYS_SAX,'Baritone (Mi♭): âm thật thấp hơn nốt kèn 1 quãng 8 + quãng 6 lớn. Có thêm nốt A trầm.',{lowA:true}),
+
+  I('flute','flute','Concert Flute','Đô',0,60,96,SYS_FLUTE,'Concert flute (Đô): âm thật trùng nốt sáo. Thế bấm hệ Boehm.'),
+  I('piccolo','flute','Piccolo','Đô',12,62,96,SYS_FLUTE,'Piccolo (Đô): âm thật CAO hơn nốt sáo 1 quãng 8. Cùng thế bấm với flute.'),
+  I('altofl','flute','Alto Flute','Sol',-5,60,91,SYS_FLUTE,'Alto flute (Sol): âm thật thấp hơn nốt sáo một quãng 4 đúng. Cùng thế bấm với flute.'),
+  I('bassfl','flute','Bass Flute','Đô',-12,60,86,SYS_FLUTE,'Bass flute (Đô): âm thật thấp hơn nốt sáo 1 quãng 8. Cùng thế bấm với flute.'),
+  I('recorder','flute','Recorder','Đô',12,60,86,SYS_REC,'Recorder soprano (Đô, hệ Baroque): âm thật CAO hơn nốt viết 1 quãng 8.'),
+  I('pan','flute','Pan Flute','Sol',0,67,103,SYS_PAN,'Pan flute 22 ống, Sol trưởng (G4–G7).'),
+  I('sao6','flute','Sáo ngang 6 lỗ','Đô',0,72,96,sixHole(72,false),'Sáo trúc 6 lỗ giọng Đô: bịt hết = Đô (C5).'),
+  I('sao10','flute','Sáo ngang 10 lỗ','Đô',0,72,96,SYS_SAO10,'Sáo 10 lỗ giọng Đô (mô hình tham khảo).'),
+  I('tieu','flute','Sáo Tiêu','Đô',0,67,91,sixHole(67,true),'Sáo tiêu (thổi dọc) giọng Đô: bịt hết = Sol (G4). Thế bấm tham khảo.'),
+  I('saomeo','flute','Sáo Mèo','Đô',0,67,79,eightHole(67,1,true),'Sáo Mèo (H\'Mông, có lưỡi gà) giọng Đô: bịt hết = Sol (G4). Thế bấm tham khảo — mỗi cây có thể khác.'),
+  I('dizi','flute','Dizi','Sol',0,74,98,sixHole(74,false),'Dizi giọng G (筒音作5): bịt hết = Rê (D5).'),
+  I('xiao','flute','Xiao','Sol',0,62,86,eightHole(62,2,false),'Xiao 8 lỗ giọng G: bịt hết = Rê (D4). Thế bấm tham khảo.'),
+  I('shaku','flute','Shakuhachi','Rê',0,62,86,SYS_SHAKU,'Shakuhachi 1.8 (Rê): bịt hết = D4.'),
+  I('ocarina','flute','Ocarina','Đô',0,69,89,SYS_OCA,'Ocarina 12 lỗ Alto C (hệ Á): A4–F6.'),
+
+  I('clarBb','wood','B♭ Clarinet','Si♭',-2,52,91,SYS_CLAR,'Clarinet Si♭: âm thật thấp hơn nốt kèn một quãng 2 lớn.'),
+  I('clarA','wood','A Clarinet','La',-3,52,91,SYS_CLAR,'Clarinet La: âm thật thấp hơn nốt kèn một quãng 3 thứ.'),
+  I('bassclar','wood','Bass Clarinet','Si♭',-14,48,88,SYS_CLAR,'Bass clarinet Si♭ (khoá Sol): âm thật thấp hơn 1 quãng 8 + quãng 2 lớn. Loại xuống C trầm.',{lowKeys:true}),
+  I('clarEb','wood','E♭ Clarinet','Mi♭',3,52,88,SYS_CLAR,'Clarinet Mi♭: âm thật CAO hơn nốt kèn một quãng 3 thứ.'),
+  I('oboe','wood','Oboe','Đô',0,58,89,SYS_OBOE,'Oboe (Đô): âm thật trùng nốt kèn.'),
+  I('bassoon','wood','Bassoon','Đô',0,34,70,SYS_BSN,'Bassoon (Đô, khoá Fa): âm thật trùng nốt kèn.'),
+  I('ehorn','wood','English Horn','Fa',-7,59,89,SYS_OBOE,'English horn (Fa): âm thật thấp hơn nốt kèn một quãng 5 đúng. Cùng thế bấm với oboe.'),
+
+  I('trumpet','brass','Trumpet','Si♭',-2,54,84,SYS_BRASS,'Trumpet Si♭: âm thật thấp hơn nốt kèn một quãng 2 lớn.',{valves:3,base:48,maxPartial:10}),
+  I('cornet','brass','Cornet','Si♭',-2,54,82,SYS_BRASS,'Cornet Si♭: âm thật thấp hơn nốt kèn một quãng 2 lớn.',{valves:3,base:48,maxPartial:9}),
+  I('flugel','brass','Flugelhorn','Si♭',-2,54,81,SYS_BRASS,'Flugelhorn Si♭: âm thật thấp hơn nốt kèn một quãng 2 lớn.',{valves:3,base:48,maxPartial:9}),
+  I('horn','brass','French Horn','Fa',-7,42,84,SYS_BRASS,'Horn kép F/B♭: âm thật thấp hơn nốt kèn một quãng 5 đúng. Phím ngón cái chuyển sang bên B♭.',{valves:3,base:36,maxPartial:16,horn:true}),
+  I('euph','brass','Euphonium','Si♭ (khoá Fa)',0,40,70,SYS_BRASS,'Euphonium 4 van, ghi khoá Fa theo âm thật.',{valves:4,base:34,maxPartial:8}),
+  I('barihorn','brass','Baritone Horn','Si♭ (khoá Fa)',0,40,70,SYS_BRASS,'Baritone horn 3 van, ghi khoá Fa theo âm thật.',{valves:3,base:34,maxPartial:8}),
+  I('tuba','brass','Tuba','BB♭',0,28,65,SYS_BRASS,'Tuba BB♭ 4 van, ghi khoá Fa theo âm thật.',{valves:4,base:22,maxPartial:12}),
+  I('sousa','brass','Sousaphone','BB♭',0,28,62,SYS_BRASS,'Sousaphone BB♭ 3 van, ghi khoá Fa theo âm thật.',{valves:3,base:22,maxPartial:12}),
+
+  I('akai','ewi','Akai EWI','Đô',0,48,84,SYS_EWI,'Akai EWI (chế độ EWI): thế bấm kiểu sax + con lăn quãng 8. Mặc định âm thật = nốt bấm; có thể đặt Transpose.',{ewi:true}),
+  I('aerophone','ewi','Roland Aerophone','Đô',0,58,90,SYS_SAX,'Roland Aerophone (chế độ thế bấm Sax): bấm như saxophone. Mặc định âm thật = nốt bấm; đổi Transpose sang Mi♭/Si♭ nếu muốn.'),
+  I('yds','ewi','Yamaha YDS','Đô',0,58,90,SYS_SAX,'Yamaha YDS (Digital Saxophone): bấm y như saxophone. Mặc định âm thật = nốt bấm; có thể đặt Transpose.')
+];
+const BY_ID = Object.fromEntries(INSTRUMENTS.map(i => [i.id, i]));
+
+/* ===================== TRẠNG THÁI ===================== */
+const store = {
+  get(k,d){ try { const v = localStorage.getItem('saxnotes.'+k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k,v){ try { localStorage.setItem('saxnotes.'+k, JSON.stringify(v)); } catch(e){} }
+};
+let INST = BY_ID[store.get('inst2','alto')] || BY_ID.alto;
+let sel = store.get('sel', 72);
+let mode = store.get('mode','written');
+const concertOf = m => m + INST.shift;
+const word = () => FAMILIES[INST.fam].word || 'kèn';
+function fixSel(){ if (!(sel >= INST.low && sel <= INST.high)) sel = Math.round((INST.low + INST.high) / 2); }
+fixSel();
+
+/* ===================== VẼ GIAO DIỆN ===================== */
+function groupsOf(i){
+  if (i.sys.groups) return i.sys.groups(i);
+  const out = [];
+  for (let m = i.low; m <= i.high; ){
+    const end = Math.min(i.high, m + (11 - pc(m)));
+    out.push({ title:`${primary(m)}–${primary(end)}`, from:m, to:end });
+    m = end + 1;
+  }
+  return out;
+}
+const TINT = ['#fbfaf7','#f3efe6','#ebe4d4'];
+function renderGroups(){
+  const G = groupsOf(INST);
+  let chips = '';
+  G.forEach((g, gi) => {
+    for (let m = g.from; m <= g.to; m++)
+      chips += `<button class="chip${m===sel?' on':''}" style="${m===sel?'':'background:'+TINT[gi%3]}" data-m="${m}" title="${g.title}"><b>${primary(m)}</b><small>♪ ${primary(concertOf(m))}</small></button>`;
+  });
+  $('groups').innerHTML = `<div class="reg">${G.map((g,gi)=>`<span><i style="background:${TINT[gi%3]}"></i>${g.title}</span>`).join('')}</div><div class="chips">${chips}</div>`;
+  $('instHint').textContent = INST.hint + ' Chữ xanh nhỏ = âm thật.';
+}
+
+function renderSelected(){
+  const c = concertOf(sel), S = INST.sys;
+  $('wName').textContent = fullName(sel);
+  $('wSol').textContent = SOL[pc(sel)] + ' · ' + INST.name;
+  $('cName').textContent = fullName(c);
+  $('cSol').textContent = SOL[pc(c)] + ' · nghe như trên piano';
+  const SLOTS = S.slots || 3;                       // số ô cố định để sơ đồ không đổi kích thước
+  const all = S.fing(sel) || [];
+  const list = all.slice(0, SLOTS);
+  $('fingTitle').textContent = `Cách bấm nốt ${primary(sel)} — ${INST.name} — ${all.length ? all.length + ' cách' : 'không có thế bấm chuẩn'}`;
+  $('fings').style.gridTemplateColumns = `repeat(${SLOTS},minmax(0,1fr))`;
+  let html = '';
+  for (let i = 0; i < SLOTS; i++){
+    const x = list[i];
+    if (!x){ html += '<div class="fing empty"></div>'; continue; }
+    const sum = S.sum(x);
+    html += `
+    <div class="fing">
+      <h4 title="${x.name}">${x.name}${i===0?'<span class="tag">thường dùng</span>':''}</h4>
+      <p title="${x.note || ''}">${x.note || ''}</p>
+      <div class="svgbox">${S.svg(x)}</div>
+      <div class="keys" title="${sum}">${sum}</div>
+    </div>`;
+  }
+  $('fings').innerHTML = html;
+  $('fingHint').textContent = S.hint;
+}
+
+/* Piano co giãn theo % chiều ngang — dải phím tự theo nhạc cụ */
+const isBlack = m => [1,3,6,8,10].includes(pc(m));
+let P_LOW = 48, P_HIGH = 96, WHITES = 29;
+function pianoRange(){
+  const lo = Math.min(INST.low, INST.low + INST.shift), hi = Math.max(INST.high, INST.high + INST.shift);
+  P_LOW = Math.floor(lo / 12) * 12;
+  P_HIGH = Math.ceil((hi + 1) / 12) * 12;
+  WHITES = 0; for (let m = P_LOW; m <= P_HIGH; m++) if (!isBlack(m)) WHITES++;
+}
+function renderPiano(){
+  pianoRange();
+  const c = concertOf(sel), ww = 100 / WHITES, bw = ww * 0.62, W = word();
+  let html = '', wi = 0;
+  for (let m = P_LOW; m <= P_HIGH; m++){
+    const cls = (m===sel?' w':'') + (m===c?' cc':'');
+    const badge = m===sel ? `<div class="badge w">${W[0].toUpperCase()+W.slice(1)}</div>` : (m===c ? '<div class="badge cc">Thật</div>' : '');
+    const label = SHARP[pc(m)] + octv(m);
+    if (!isBlack(m)){
+      html += `<div class="wk${cls}${pc(m)===0?' c':''}" data-m="${m}" title="${label}" style="left:${wi*ww}%;width:${ww}%">${badge}<span>${label}</span></div>`;
+      wi++;
+    } else {
+      html += `<div class="bk${cls}" data-m="${m}" title="${label}" style="left:${wi*ww - bw/2}%;width:${bw}%">${badge}<span>${label}</span></div>`;
+    }
+  }
+  $('piano').innerHTML = html;
+  markLive();
+}
+
+/* ---------- Thanh chọn nhạc cụ ---------- */
+function renderInstBar(){
+  $('instSeg').innerHTML = INSTRUMENTS.filter(i => i.fam === 'sax').map(i =>
+    `<button data-inst="${i.id}" title="${i.hint}"><b>${i.name}</b><small>${i.key}</small></button>`).join('');
+  $('fams').innerHTML = Object.entries(FAMILIES).filter(([k]) => k !== 'sax').map(([k, F]) => `
+    <div class="fam" data-fam="${k}">
+      <button class="famBtn"><b>${F.label} ▾</b><small class="famSel">chọn nhạc cụ</small></button>
+      <div class="menu">${INSTRUMENTS.filter(i => i.fam === k).map(i =>
+        `<button data-inst="${i.id}" title="${i.hint}"><span>${i.name}</span><small>${i.key}</small></button>`).join('')}</div>
+    </div>`).join('');
+}
+function renderSeg(){
+  document.querySelectorAll('[data-inst]').forEach(b => b.classList.toggle('on', b.dataset.inst === INST.id));
+  document.querySelectorAll('.fam').forEach(el => {
+    const on = el.dataset.fam === INST.fam;
+    el.querySelector('.famBtn').classList.toggle('on', on);
+    el.querySelector('.famSel').textContent = on ? INST.name : 'chọn nhạc cụ';
+  });
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode===mode));
+  const W = word();
+  document.querySelectorAll('.wWord').forEach(e => e.textContent = 'Nốt ' + W);
+  document.querySelectorAll('.wWordL').forEach(e => e.textContent = 'nốt ' + W);
+}
+function renderAll(){ renderSeg(); renderGroups(); renderSelected(); renderPiano(); }
+function setInst(id){
+  INST = BY_ID[id]; store.set('inst2', id);
+  fixSel(); store.set('sel', sel);
+  updateTunerRange(); renderAll();
+}
+
+/* ===================== ÂM THANH (Web Audio, không cần file) ===================== */
+let ctx = null;
+function play(midi){
+  try{
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime, freq = 440 * Math.pow(2, (midi-69)/12);
+    const osc = ctx.createOscillator(), osc2 = ctx.createOscillator();
+    const filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    const lfo = ctx.createOscillator(), lfoG = ctx.createGain();
+    osc.type = INST.fam === 'flute' ? 'triangle' : 'sawtooth'; osc.frequency.value = freq;
+    osc2.type = INST.fam === 'flute' ? 'sine' : 'square'; osc2.frequency.value = freq; osc2.detune.value = 4;
+    lfo.frequency.value = 5.2; lfoG.gain.value = freq * 0.006;
+    lfo.connect(lfoG); lfoG.connect(osc.frequency); lfoG.connect(osc2.frequency);
+    filt.type = 'lowpass'; filt.frequency.value = Math.min(freq * 3.2, 5000); filt.Q.value = 1.2;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.18, t + 0.06);
+    g.gain.setValueAtTime(0.16, t + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    osc.connect(filt); osc2.connect(filt); filt.connect(g); g.connect(ctx.destination);
+    [osc,osc2,lfo].forEach(o => { o.start(t); o.stop(t + 1.35); });
+  } catch(e){}
+}
+
+/* ===================== SỰ KIỆN ===================== */
+function select(m, sound){
+  sel = Math.max(INST.low, Math.min(INST.high, m)); store.set('sel', sel);
+  renderGroups(); renderSelected(); renderPiano();
+  if (sound) play(concertOf(sel));
+}
+let toastTimer;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function closeMenus(){ document.querySelectorAll('.fam.open').forEach(e => e.classList.remove('open')); }
+document.addEventListener('click', e => {
+  const fb = e.target.closest('.famBtn');
+  if (fb){ const fam = fb.parentElement, was = fam.classList.contains('open'); closeMenus(); if (!was) fam.classList.add('open'); return; }
+  const ib = e.target.closest('[data-inst]');
+  if (ib){ closeMenus(); setInst(ib.dataset.inst); return; }
+  if (!e.target.closest('.menu')) closeMenus();
+});
+$('modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  mode = b.dataset.mode; store.set('mode', mode); renderSeg();
+});
+$('groups').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (b) select(+b.dataset.m, true);
+});
+$('piano').addEventListener('click', e => {
+  const k = e.target.closest('[data-m]'); if (!k) return;
+  const m = +k.dataset.m;
+  play(m);
+  const written = mode === 'written' ? m : m - INST.shift;
+  if (written < INST.low || written > INST.high) {
+    toast(`${primary(m)} nằm ngoài tầm âm của ${INST.name}`);
+    return;
+  }
+  sel = written; store.set('sel', sel);
+  renderGroups(); renderSelected(); renderPiano();
+});
+$('playBtn').addEventListener('click', () => play(concertOf(sel)));
+$('prevBtn').addEventListener('click', () => select(sel - 1, true));
+$('nextBtn').addEventListener('click', () => select(sel + 1, true));
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'Escape') closeMenus();
+  if (e.key === 'ArrowLeft') { select(sel - 1, true); e.preventDefault(); }
+  if (e.key === 'ArrowRight') { select(sel + 1, true); e.preventDefault(); }
+  if (e.key === ' ') { play(concertOf(sel)); e.preventDefault(); }
+});
+
+/* ===================== TUNER (micro) ===================== */
+let liveMidi = null;
+let micStream = null, micCtx = null, analyser = null, rafId = 0, buf = null;
+let freqHist = [], centsSmooth = 0, lastSeen = 0, followLast = null, followCount = 0;
+let a4 = store.get('a4', 440);
+$('a4Input').value = a4;
+$('followChk').checked = store.get('follow', false);
+
+function markLive(){
+  document.querySelectorAll('#piano .live').forEach(e => e.classList.remove('live'));
+  if (liveMidi != null){ const e = document.querySelector(`#piano [data-m="${liveMidi}"]`); if (e) e.classList.add('live'); }
+}
+const GCX = 110, GCY = 112, GR = 88;
+function polar(cents, r = GR){ const a = (cents / 50) * (Math.PI / 2); return [GCX + r * Math.sin(a), GCY - r * Math.cos(a)]; }
+function arc(c1, c2){ const [x1,y1] = polar(c1), [x2,y2] = polar(c2); return `M${x1} ${y1} A${GR} ${GR} 0 0 1 ${x2} ${y2}`; }
+(function drawGauge(){
+  $('gArc').setAttribute('d', arc(-50, 50));
+  $('gOk').setAttribute('d', arc(-5, 5));
+  let t = '';
+  for (const c of [-50,-40,-30,-20,-10,0,10,20,30,40,50]){
+    const [x1,y1] = polar(c, GR - 12), [x2,y2] = polar(c, GR - (c % 50 === 0 || c === 0 ? 22 : 17));
+    t += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9a958b" stroke-width="${c===0?2:1}"/>`;
+    if (c % 25 === 0 || c === 0){ const [tx,ty] = polar(c, GR - 32); t += `<text x="${tx}" y="${ty + 3}">${c > 0 ? '+' + c : c}</text>`; }
+  }
+  t += `<text x="${GCX}" y="${GCY + 14}">cent</text>`;
+  $('gTicks').innerHTML = t;
+})();
+/* Ô nhắc nhở giữ tối thiểu 2 giây */
+const HOLD_MS = 2000;
+let stKey = '', stShownAt = 0, stLastUpdate = 0;
+function setStatus(key, cls, text){
+  const now = performance.now(), st = $('tStatus');
+  if (key === stKey){
+    if (key){ st.textContent = text; st.className = 'tun-status ' + (cls || ''); stLastUpdate = now; }
+    return;
+  }
+  const canChange = !stKey || (key ? now - stShownAt >= HOLD_MS : now - stLastUpdate >= HOLD_MS);
+  if (!canChange) return;
+  stKey = key; stShownAt = stLastUpdate = now;
+  st.className = 'tun-status ' + (cls || '');
+  st.textContent = key ? text : '';
+}
+function resetStatus(){ stKey = ''; $('tStatus').className = 'tun-status'; $('tStatus').textContent = ''; }
+function setNeedle(c){
+  const deg = Math.max(-50, Math.min(50, c)) / 50 * 90;
+  $('needle').style.transform = `rotate(${deg}deg)`;
+  $('needle').setAttribute('stroke', Math.abs(c) <= 5 ? '#2fa04a' : Math.abs(c) <= 15 ? '#c08a1e' : '#c0392b');
+}
+
+/* Dò cao độ bằng thuật toán YIN */
+let TUNE = { minF:90, maxF:1600, fft:4096 };
+const hz = m => a4 * Math.pow(2, (m - 69) / 12);
+function updateTunerRange(){
+  const minF = Math.max(22, hz(INST.low + INST.shift) * 0.85), maxF = Math.min(4500, hz(INST.high + INST.shift) * 1.25);
+  TUNE = { minF, maxF, fft: minF < 120 ? 8192 : 4096 };
+  if (analyser && analyser.fftSize !== TUNE.fft){ analyser.fftSize = TUNE.fft; buf = new Float32Array(TUNE.fft); }
+}
+function detectPitch(raw, srRaw){
+  let rms = 0; for (let i = 0; i < raw.length; i++) rms += raw[i] * raw[i];
+  rms = Math.sqrt(rms / raw.length);
+  if (rms < 0.012) return null;
+  const dec = TUNE.minF < 60 ? 4 : TUNE.minF < 120 ? 2 : 1;
+  let data = raw, sr = srRaw;
+  if (dec > 1){
+    data = new Float32Array(Math.floor(raw.length / dec));
+    for (let i = 0; i < data.length; i++){ let a = 0; for (let k = 0; k < dec; k++) a += raw[i*dec + k]; data[i] = a / dec; }
+    sr = srRaw / dec;
+  }
+  const W = Math.floor(data.length / 2);
+  const tauMin = Math.max(2, Math.floor(sr / TUNE.maxF)), tauMax = Math.min(W - 1, Math.ceil(sr / TUNE.minF));
+  const d = new Float32Array(tauMax + 1);
+  for (let tau = 1; tau <= tauMax; tau++){
+    let s = 0;
+    for (let i = 0; i < W; i++){ const x = data[i] - data[i + tau]; s += x * x; }
+    d[tau] = s;
+  }
+  let run = 0; const cm = new Float32Array(tauMax + 1); cm[0] = 1;
+  for (let tau = 1; tau <= tauMax; tau++){ run += d[tau]; cm[tau] = run ? d[tau] * tau / run : 1; }
+  let tau = -1;
+  for (let t = tauMin; t <= tauMax; t++){
+    if (cm[t] < 0.12){ while (t + 1 <= tauMax && cm[t + 1] < cm[t]) t++; tau = t; break; }
+  }
+  if (tau < 0) return null;
+  const x0 = cm[tau - 1] ?? cm[tau], x2 = cm[tau + 1] ?? cm[tau], x1 = cm[tau];
+  const den = x0 + x2 - 2 * x1;
+  return sr / (den ? tau + (x0 - x2) / (2 * den) : tau);
+}
+function tunerLoop(){
+  analyser.getFloatTimeDomainData(buf);
+  const freq = detectPitch(buf, micCtx.sampleRate);
+  const now = performance.now();
+  if (freq){
+    freqHist.push(freq); if (freqHist.length > 5) freqHist.shift();
+    const med = [...freqHist].sort((a,b) => a - b)[Math.floor(freqHist.length / 2)];
+    const exact = 69 + 12 * Math.log2(med / a4);
+    const concert = Math.round(exact);
+    const cents = (exact - concert) * 100;
+    centsSmooth = Math.abs(cents - centsSmooth) > 30 ? cents : centsSmooth * 0.6 + cents * 0.4;
+    lastSeen = now;
+    showReading(concert, centsSmooth, med);
+  } else if (now - lastSeen > 600){
+    freqHist = [];
+    if (liveMidi != null){ liveMidi = null; markLive(); }
+    setNeedle(0);
+    setStatus('', '', '');
+    if (now - lastSeen > HOLD_MS && !stKey){
+      $('tNote').textContent = '–';
+      $('tSub').textContent = 'Đang nghe… hãy thổi một nốt dài';
+    }
+  }
+  rafId = requestAnimationFrame(tunerLoop);
+}
+function showReading(concert, cents, freq){
+  const horn = concert - INST.shift;
+  const c = Math.round(cents);
+  $('tNote').textContent = primary(horn);
+  $('tSub').textContent = `Âm thật ${primary(concert)} · ${freq.toFixed(1)} Hz · ${c > 0 ? '+' : ''}${c} cent`;
+  setNeedle(cents);
+  if (liveMidi !== concert){ liveMidi = concert; markLive(); }
+  if ($('followChk').checked && horn >= INST.low && horn <= INST.high && horn !== sel){
+    followCount = (followLast === horn) ? followCount + 1 : 1; followLast = horn;
+    if (followCount >= 8){ sel = horn; store.set('sel', sel); renderGroups(); renderSelected(); renderPiano(); }
+  }
+  const adv = ADV[INST.fam === 'sax' || INST.fam === 'wood' ? 'reed' : INST.fam] || ADV.reed;
+  if (horn !== sel){
+    setStatus('other' + horn, 'st-other', `Đang thổi ${primary(horn)} — khác nốt đã chọn (${primary(sel)})`);
+  } else if (Math.abs(c) <= 5){
+    setStatus('ok' + horn, 'st-ok', `✓ Đúng nốt ${primary(sel)}, chuẩn cao độ`);
+  } else {
+    const cls = Math.abs(c) <= 15 ? 'st-near' : 'st-off';
+    if (c > 0) setStatus('hi' + horn, cls, `Đúng nốt nhưng cao ${c} cent — ${adv[0]}`);
+    else       setStatus('lo' + horn, cls, `Đúng nốt nhưng thấp ${-c} cent — ${adv[1]}`);
+  }
+}
+async function startTuner(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    toast('Trình duyệt này không hỗ trợ micro. Hãy dùng Chrome hoặc Edge.'); return;
+  }
+  try{
+    micStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } });
+  } catch(e){
+    toast('Không mở được micro — hãy cho phép quyền micro cho trang này.'); return;
+  }
+  micCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = micCtx.createMediaStreamSource(micStream);
+  analyser = micCtx.createAnalyser(); updateTunerRange(); analyser.fftSize = TUNE.fft;
+  src.connect(analyser);
+  buf = new Float32Array(analyser.fftSize);
+  $('micBtn').textContent = '■ Tắt tuner'; $('micBtn').classList.add('on');
+  $('tSub').textContent = 'Đang nghe… hãy thổi một nốt dài';
+  lastSeen = 0; tunerLoop();
+}
+function stopTuner(){
+  cancelAnimationFrame(rafId);
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (micCtx) micCtx.close();
+  micStream = micCtx = analyser = null;
+  liveMidi = null; markLive(); setNeedle(0);
+  $('micBtn').textContent = '🎤 Bật tuner'; $('micBtn').classList.remove('on');
+  $('tNote').textContent = '–'; $('tSub').textContent = 'Tuner đã tắt'; resetStatus();
+}
+$('micBtn').addEventListener('click', () => micStream ? stopTuner() : startTuner());
+$('followChk').addEventListener('change', e => store.set('follow', e.target.checked));
+$('a4Input').addEventListener('change', e => {
+  const v = Math.max(430, Math.min(450, +e.target.value || 440));
+  a4 = v; e.target.value = v; store.set('a4', v); updateTunerRange();
+});
+setNeedle(0);
+
+renderInstBar();
+renderAll();
+
+</script>
+</body>
+</html>
